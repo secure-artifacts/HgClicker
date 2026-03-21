@@ -324,11 +324,77 @@ class proc07Popover {
                 return await myXPath.getElement(selector, 1);
             }
 
+            let _watchSubmitBtn = () => {
+                // 若已有监听，先判断旧 dialog 是否还在 DOM 里
+                if (window.__heygenSubmitObserver) {
+                    if (window.__heygenSubmitObserverDialog && document.contains(window.__heygenSubmitObserverDialog)) {
+                        return; // 旧 dialog 仍存在，不重复挂载
+                    }
+                    // 旧 dialog 已关闭，断开残留 observer
+                    window.__heygenSubmitObserver.disconnect();
+                    window.__heygenSubmitObserver = null;
+                    window.__heygenSubmitObserverDialog = null;
+                }
+
+                // 尝试点击 Submit（若已可点击则直接点，返回 true）
+                let _tryClick = (dialog) => {
+                    let btns = Array.from(dialog.querySelectorAll('button:not([disabled])'));
+                    let btn = btns.find(b => b.textContent.trim() === 'Submit');
+                    if (!btn) return false;
+                    if (window.__heygenSubmitObserver) {
+                        window.__heygenSubmitObserver.disconnect();
+                        window.__heygenSubmitObserver = null;
+                    }
+                    window.__heygenSubmitObserverDialog = null;
+                    mySimulate.cursorClick(btn);
+                    return true;
+                };
+
+                // 第二阶段：dialog 已出现，等待至少 2 秒后再开始监听 Submit
+                let _watchDialogSubmit = (dialog) => {
+                    setTimeout(() => {
+                        if (_tryClick(dialog)) return; // 延迟后已可点击，直接点
+
+                        let obs = new MutationObserver(() => _tryClick(dialog));
+                        window.__heygenSubmitObserver = obs;
+                        window.__heygenSubmitObserverDialog = dialog;
+                        obs.observe(dialog, {
+                            subtree: true,
+                            childList: true,       // 兼容 React 重新渲染节点
+                            attributes: true,
+                            attributeFilter: ['disabled']
+                        });
+                    }, 5000);
+                };
+
+                let dialog = document.querySelector('div[role="dialog"]');
+                if (dialog) {
+                    // dialog 已存在，直接进入第二阶段
+                    _watchDialogSubmit(dialog);
+                } else {
+                    // dialog 还没出现（刚点了 Generate），先等它出现
+                    let obs = new MutationObserver(() => {
+                        let d = document.querySelector('div[role="dialog"]');
+                        if (!d) return;
+                        obs.disconnect();
+                        if (window.__heygenSubmitObserver === obs) {
+                            window.__heygenSubmitObserver = null;
+                            window.__heygenSubmitObserverDialog = null;
+                        }
+                        _watchDialogSubmit(d);
+                    });
+                    window.__heygenSubmitObserver = obs;
+                    window.__heygenSubmitObserverDialog = null;
+                    obs.observe(document.body, { childList: true, subtree: true });
+                }
+            };
+
             let isDialog = await _isDialog();
             if (!isDialog) {
                 let btn = await _getBtnGenerate();
                 if (btn) {
                     await mySimulate.cursorClick(btn);
+                    _watchSubmitBtn(); // 点了 Generate 后立即挂载，自动等待 dialog → Submit
                     return true;
                 }
             }
@@ -336,6 +402,11 @@ class proc07Popover {
                 let btn = await _getBtnSubmit();
                 if (btn) {
                     await mySimulate.cursorClick(btn);
+                    return true;
+                }
+                else {
+                    // 弹框已出现但 Submit 尚未可点击，挂载监听等待
+                    _watchSubmitBtn();
                     return true;
                 }
             }

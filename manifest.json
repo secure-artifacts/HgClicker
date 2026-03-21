@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "HeyGen Helper T1 / Auto Click",
-    "version": "1.3.2",
+    "version": "1.4.0",
     "author": "James",
     "description": "HeyGen 辅助工具 自动点击",
     "icons": {
