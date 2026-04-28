@@ -16,7 +16,7 @@ async function _setActionIcon() {
             cv.getContext('2d').drawImage(bmp, 0, 0, s, s);
             imageData[s] = cv.getContext('2d').getImageData(0, 0, s, s);
         }
-        await chrome.action.setIcon({ imageData });
+        await chrome.browserAction.setIcon({ imageData });
         console.log('[HeyGen Helper] 图标设置成功');
     } catch (e) {
         console.warn('[HeyGen Helper] setIcon 失败:', e.message);

@@ -1,5 +1,5 @@
 {
-    "manifest_version": 3,
+    "manifest_version": 2,
     "name": "HeyGen Helper T2 / Auto Click",
     "version": "2.2.0",
     "author": "James",
@@ -8,7 +8,7 @@
     "browser_specific_settings": {
         "gecko": {
             "id": "heygen-helper@james.local",
-            "strict_min_version": "109.0"
+            "strict_min_version": "57.0"
         }
     },
 
@@ -18,7 +18,7 @@
         "48": "icon48.png",
         "128": "icon128.png"
     },
-    "action": {
+    "browser_action": {
         "default_icon": {
             "16": "icon16.png",
             "32": "icon32.png",
@@ -31,13 +31,13 @@
     "permissions": [
         "tabs",
         "activeTab",
-        "scripting",
         "storage",
         "downloads",
         "browsingData",
         "cookies",
         "webRequest",
-        "webRequestBlocking"
+        "webRequestBlocking",
+        "<all_urls>"
     ],
 
     "content_scripts": [
@@ -69,37 +69,13 @@
         }
     ],
 
-    "host_permissions": [
-        "<all_urls>"
-    ],
-
     "web_accessible_resources": [
-        {
-            "matches": [
-                "https://app.heygen.com/*"
-            ],
-            "resources": [
-                "js/myUtil.js",
-                "js/myXPath.js",
-                "js/mySimulate.js",
-                "js/myElementA.js",
-                "js/proc01Questionnaire.js",
-                "js/proc02UpdateImage.js",
-                "js/proc03Walkthrough.js",
-                "js/proc04Caption.js",
-                "js/proc05AvatarForm.js",
-                "js/proc06OutPutName.js",
-                "js/proc07Popover.js",
-                "js/proc08BatchDownload.js",
-                "js/proc09AutoRedirect.js",
-                "css/styleA.css",
-                "css/bootstrap.min.css",
-                "icon16.png",
-                "icon32.png",
-                "icon48.png",
-                "icon128.png"
-            ]
-        }
+        "js/*.js",
+        "css/*",
+        "icon16.png",
+        "icon32.png",
+        "icon48.png",
+        "icon128.png"
     ],
 
     "commands": {
@@ -113,6 +89,9 @@
     },
 
     "background": {
-        "scripts": ["background.js"]
-    }
+        "scripts": ["background.js"],
+        "persistent": true
+    },
+
+    "content_security_policy": "script-src 'self'; object-src 'self'"
 }
