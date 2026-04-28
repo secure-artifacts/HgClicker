@@ -1,0 +1,130 @@
+{
+    "manifest_version": 3,
+    "name": "HeyGen Helper T2 / Auto Click",
+    "version": "2.2.0",
+    "author": "James",
+    "description": "HeyGen 辅助工具 自动点击",
+
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "heygen-helper@james.local",
+            "strict_min_version": "109.0"
+        }
+    },
+
+    "icons": {
+        "16": "icon16.png",
+        "32": "icon32.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    },
+    "action": {
+        "default_icon": {
+            "16": "icon16.png",
+            "32": "icon32.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        },
+        "default_title": "HeyGen Helper"
+    },
+
+    "permissions": [
+        "tabs",
+        "activeTab",
+        "scripting",
+        "storage",
+        "downloads",
+        "browsingData",
+        "cookies",
+        "webRequest",
+        "webRequestBlocking"
+    ],
+
+    "content_scripts": [
+        {
+            "matches": [
+                "https://app.heygen.com/*"
+            ],
+            "js": [
+                "js/myUtil.js",
+                "js/myLibrary.js",
+                "js/myJson.js",
+                "js/myXPath.js",
+                "js/myFacebook.js",
+                "js/mySimulate.js",
+                "js/myElementA.js",
+                "js/myEffect.js",
+                "js/myStorage.js",
+                "js/myExtra.js",
+                "js/proc01Questionnaire.js",
+                "js/proc02UpdateImage.js",
+                "js/proc03Walkthrough.js",
+                "js/proc04Caption.js",
+                "js/proc05AvatarForm.js",
+                "js/proc06OutPutName.js",
+                "js/proc07Popover.js",
+                "js/proc08BatchDownload.js",
+                "js/proc09AutoRedirect.js",
+                "content.js"
+            ],
+            "css": [
+                "css/styleA.css",
+                "css/bootstrap.min.css"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+
+    "host_permissions": [
+        "<all_urls>"
+    ],
+
+    "web_accessible_resources": [
+        {
+            "matches": [
+                "https://app.heygen.com/*"
+            ],
+            "resources": [
+                "js/myUtil.js",
+                "js/myLibrary.js",
+                "js/myJson.js",
+                "js/myXPath.js",
+                "js/myFacebook.js",
+                "js/mySimulate.js",
+                "js/myElementA.js",
+                "js/myEffect.js",
+                "js/myStorage.js",
+                "js/myExtra.js",
+                "js/proc01Questionnaire.js",
+                "js/proc02UpdateImage.js",
+                "js/proc03Walkthrough.js",
+                "js/proc04Caption.js",
+                "js/proc05AvatarForm.js",
+                "js/proc06OutPutName.js",
+                "js/proc07Popover.js",
+                "js/proc08BatchDownload.js",
+                "js/proc09AutoRedirect.js",
+                "css/styleA.css",
+                "css/bootstrap.min.css",
+                "icon16.png",
+                "icon32.png",
+                "icon48.png",
+                "icon128.png"
+            ]
+        }
+    ],
+
+    "commands": {
+        "generate-video": {
+            "suggested_key": {
+                "default": "Ctrl+B",
+                "mac": "Command+B"
+            },
+            "description": "Generate video"
+        }
+    },
+
+    "background": {
+        "scripts": ["background.js"]
+    }
+}
