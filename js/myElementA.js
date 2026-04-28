@@ -161,7 +161,7 @@ class myElementA {
                     <button name="btnCopyEmail" data-tooltip="复制邮箱"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg></button>
                     <button name="btnNewAvatar" data-tooltip="上传头像"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
                     <button name="btnCaption" data-tooltip="字幕设置"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 15h4M15 15h2M7 11h2M13 11h4"/></svg></button>
-                    <button id="btnSwitcher" state="hidden">${_icon}</button>
+                    <button id="btnSwitcher" state="visible">${_icon}</button>
                     <button name="btnSettings" id="btnSettings">⚙</button>
                 </div>
                 <div name="settingsPanel" class="hg-settings-panel">
@@ -198,7 +198,6 @@ class myElementA {
                 element = document.createElement('div');
                 element.id = 'container0211A';
                 element.classList.add('container-0211');
-                element.classList.add('body-hidden');
                 element.innerHTML = html;
                 document.body.appendChild(element);
             }

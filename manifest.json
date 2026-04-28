@@ -1,16 +1,9 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
     "name": "HeyGen Helper T2 / Auto Click",
     "version": "2.2.0",
     "author": "James",
     "description": "HeyGen 辅助工具 自动点击",
-
-    "browser_specific_settings": {
-        "gecko": {
-            "id": "heygen-helper@james.local",
-            "strict_min_version": "57.0"
-        }
-    },
 
     "icons": {
         "16": "icon16.png",
@@ -18,7 +11,7 @@
         "48": "icon48.png",
         "128": "icon128.png"
     },
-    "browser_action": {
+    "action": {
         "default_icon": {
             "16": "icon16.png",
             "32": "icon32.png",
@@ -31,13 +24,12 @@
     "permissions": [
         "tabs",
         "activeTab",
+        "scripting",
         "storage",
         "downloads",
         "browsingData",
         "cookies",
-        "webRequest",
-        "webRequestBlocking",
-        "<all_urls>"
+        "webRequest"
     ],
 
     "content_scripts": [
@@ -69,13 +61,24 @@
         }
     ],
 
+    "host_permissions": [
+        "<all_urls>"
+    ],
+
     "web_accessible_resources": [
-        "js/*.js",
-        "css/*",
-        "icon16.png",
-        "icon32.png",
-        "icon48.png",
-        "icon128.png"
+        {
+            "matches": [
+                "https://app.heygen.com/*"
+            ],
+            "resources": [
+                "js/*.js",
+                "css/*",
+                "icon16.png",
+                "icon32.png",
+                "icon48.png",
+                "icon128.png"
+            ]
+        }
     ],
 
     "commands": {
@@ -89,9 +92,10 @@
     },
 
     "background": {
-        "scripts": ["background.js"],
-        "persistent": true
+        "service_worker": "background.js"
     },
 
-    "content_security_policy": "script-src 'self'; object-src 'self'"
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }
 }
