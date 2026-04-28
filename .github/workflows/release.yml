@@ -1,0 +1,43 @@
+name: Release Browser Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package Extension
+        run: |
+          zip -r heygen-helper-${{ github.ref_name }}.zip \
+            background.js \
+            content.js \
+            manifest.json \
+            icon16.png \
+            icon32.png \
+            icon48.png \
+            icon128.png \
+            icon_data.js \
+            css/ \
+            js/
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: '*.zip'
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.zip'
+          generate_release_notes: true
