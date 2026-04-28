@@ -88,31 +88,91 @@ class proc02UpdateImage {
         const self = this;
 
         try {
-            if (1) {
-                let mask = await myXPath.getElement(`//div[./div/img[@src="https://dynamic.heygen.ai/tr:f-auto/avatar/create_virtual_char.png"]]`);
-                if (!mask) {
-                    return { status: false, msg: '找不到div' };
-                }
+            // 检查 "Upload Photos of Your Avatar" 弹框是否真正可见
+            const _uploadDialogVisible = () => {
+                return Array.from(document.querySelectorAll('h1,h2,h3,h4'))
+                    .some(h => {
+                        if (!h.textContent.includes('Upload Photos')) return false;
+                        const r = h.getBoundingClientRect();
+                        return r.width > 0 && r.height > 0;
+                    });
+            };
 
-                // 方法 A：最常用，触发 mouseover 事件（会冒泡）
-                mask.dispatchEvent(new MouseEvent('mouseover', {
-                    bubbles: true,       // 让事件可以冒泡（重要）
-                    cancelable: true,
-                    view: window
-                }));
+            // 如果弹框已可见，直接返回
+            if (_uploadDialogVisible()) {
+                return { status: true, msg: '上传弹框已显示' };
             }
 
-            await myUtil.sleep(100 + Math.random() * 100);
+            // ── 新流程：hover "Create a virtual character" → 点击 "Upload photo" ──
 
-            if (1) {
-                let btn = await myXPath.getElement(`//button[contains(text(), "Upload photo")]`);
-                if (!btn) {
-                    return { status: false, msg: '找不到按钮' };
+            // 1. 等待卡片渲染完成（最多 10 秒）
+            const _waitForCard = async () => {
+                const start = Date.now();
+                while (Date.now() - start < 10000) {
+                    const img = document.querySelector('img[src*="create_virtual_char.png"]');
+                    if (img) {
+                        const r = img.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) return img;
+                    }
+                    await myUtil.sleep(300);
                 }
-                btn.click();
+                return null;
+            };
+
+            const virtualImg = await _waitForCard();
+            if (!virtualImg) {
+                return { status: false, msg: '找不到 virtual character 卡片' };
             }
-          
-            return { status: true, msg: `已找到按钮` };
+
+            let cardDiv = null;
+            let p = virtualImg.parentElement;
+            for (let i = 0; i < 6 && p; i++) {
+                if (p.classList && p.classList.contains('tw-cursor-pointer')) {
+                    cardDiv = p;
+                    break;
+                }
+                p = p.parentElement;
+            }
+            if (!cardDiv) cardDiv = virtualImg.closest('div') || virtualImg.parentElement;
+
+            // 2. 触发 hover 事件让 "Upload photo" 按钮出现
+            cardDiv.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true, view: window }));
+            cardDiv.dispatchEvent(new MouseEvent('mouseover',  { bubbles: true, cancelable: true, view: window }));
+            await myUtil.sleep(400 + Math.random() * 200);
+
+            // 3. 等待并点击 "Upload photo" 按钮
+            const _findUploadBtn = () => {
+                for (const el of document.querySelectorAll('button,div,span,a')) {
+                    const t = (el.textContent || '').trim().toLowerCase();
+                    if (t === 'upload photo' || t === 'upload photos') {
+                        const r = el.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) return el;
+                    }
+                }
+                return null;
+            };
+
+            let uploadBtn = _findUploadBtn();
+
+            // 若还没出现，再等一下重试
+            if (!uploadBtn) {
+                await myUtil.sleep(500);
+                uploadBtn = _findUploadBtn();
+            }
+
+            if (uploadBtn) {
+                uploadBtn.click();
+                await myUtil.sleep(600 + Math.random() * 300);
+            } else {
+                return { status: false, msg: 'Hover 后未找到 Upload photo 按钮' };
+            }
+
+            // 4. 确认上传弹框已打开
+            if (_uploadDialogVisible()) {
+                return { status: true, msg: '上传弹框已打开' };
+            }
+
+            return { status: false, msg: '点击后弹框未出现' };
         } catch (error) {
             throw new Error(`Error-xxxxx-xxxx: ${error.message}`);
         }

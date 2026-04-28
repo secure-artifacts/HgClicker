@@ -2,30 +2,243 @@
   scroll-behavior: auto !important;
 }
 
+/* ── Toast 提示条 ── */
+#hg-dl-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  pointer-events: none;
+  border: 1px solid #334155;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── 确认对话框（通用遮罩）── */
+#hg-dl-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ── 旧版通用确认框（保留兼容）── */
+#hg-dl-confirm-box {
+  background: #ffffff;
+  color: #111827;
+  border-radius: 16px;
+  padding: 28px 32px;
+  min-width: 300px;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+#hg-dl-confirm-msg { font-size: 15px; line-height: 1.7; margin-bottom: 24px; color: #374151; }
+#hg-dl-confirm-row { display: flex; gap: 10px; justify-content: center; }
+.hg-dl-confirm-cancel {
+  padding: 9px 24px; border-radius: 8px; border: 1px solid #d1d5db;
+  background: #ffffff; color: #6b7280; font-size: 14px; cursor: pointer; transition: background 0.15s;
+}
+.hg-dl-confirm-cancel:hover { background: #f9fafb; }
+.hg-dl-confirm-ok {
+  padding: 9px 24px; border-radius: 8px; border: none;
+  background: #ef4444; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.hg-dl-confirm-ok:hover { background: #dc2626; }
+
+/* ══════════════════════════════════
+   清理数据对话框（新版）
+══════════════════════════════════ */
+.hg-clear-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 22px 22px 18px;
+  min-width: 280px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.14), 0 6px 20px rgba(0,0,0,0.07);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 标题行 */
+.hg-clear-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.hg-clear-title-row span {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+/* 分区标签 */
+.hg-clear-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: -6px;
+}
+
+/* 条目列表 */
+.hg-clear-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hg-clear-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  background: #fef2f2;
+  border-radius: 9px;
+  border: 1px solid #fecaca;
+}
+.hg-clear-item-icon { font-size: 14px; flex-shrink: 0; }
+.hg-clear-item-name { font-size: 13px; font-weight: 600; color: #374151; flex: 1; }
+.hg-clear-item-note { font-size: 11px; color: #9ca3af; }
+
+/* 保留提示 */
+.hg-clear-keep-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  background: #f0fdf4;
+  border-radius: 9px;
+  border: 1px solid #bbf7d0;
+  font-size: 12px;
+  color: #16a34a;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 视频删除复选框 */
+.hg-clear-chk-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.hg-clear-chk-row:hover { background: #eff6ff; border-color: #bfdbfe; }
+.hg-clear-chk-row:has(input:checked) { background: #fff7ed; border-color: #fed7aa; }
+.hg-clear-chk-row span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hg-clear-chk-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #f97316;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 按钮行 */
+.hg-clear-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.hg-clear-btn-cancel {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.hg-clear-btn-cancel:hover { background: #f1f5f9; color: #374151; }
+.hg-clear-btn-ok {
+  flex: 2;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: 0.01em;
+}
+.hg-clear-btn-ok:hover { background: #dc2626; }
+
+/* ══════════════════════════════════
+   主面板 — 单排图标
+══════════════════════════════════ */
 #container0211A {
   position: fixed;
-  top: 0;
-  right: 223px;
-  width: 130px;
+  top: 8px;
+  right: 228px;
+  width: auto;
   z-index: 10000;
-  display: block;
-  background-color: #f4fbee;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
   pointer-events: auto !important;
+  padding: 6px;
 }
-#container0211A * {
-  font-size: 16px;
-}
+
+/* ── 折叠状态（只显示 icon 圆形按钮）── */
 #container0211A.body-hidden {
-  width: auto !important;
-  background-color: transparent !important;
-}
-#container0211A.body-hidden #blockHeader {
-  background-color: transparent !important;
+  background: transparent !important;
   border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
   padding: 0 !important;
-  height: auto !important;
 }
-#container0211A.body-hidden #blockHeader div {
+#container0211A.body-hidden #mainRow > button:not(#btnSwitcher) {
+  display: none !important;
+}
+#container0211A.body-hidden #mainRow {
+  gap: 0 !important;
+  padding: 0 !important;
+}
+#container0211A.body-hidden .hg-settings-panel {
   display: none !important;
 }
 #container0211A.body-hidden #btnSwitcher {
@@ -33,11 +246,9 @@
   height: 40px !important;
   border-radius: 50% !important;
   padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-  background-color: #0ea5e9 !important;
-  border: none !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12) !important;
 }
 #container0211A.body-hidden #btnSwitcher img {
   width: 100% !important;
@@ -45,91 +256,261 @@
   object-fit: contain !important;
   display: block !important;
 }
-#container0211A.body-hidden #blockBody {
-  display: none !important;
+
+/* ── 主行（单排图标）── */
+#container0211A #mainRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-#container0211A #blockHeader {
-  width: 100%;
-  height: 50px;
-  padding: 10px;
-  background-color: #75ddff;
-}
-#container0211A #blockHeader p {
-  margin: 0;
+
+/* ── 所有图标按钮 ── */
+#container0211A #mainRow > button {
+  -webkit-user-select: none;
+  user-select: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   padding: 0;
-}
-#container0211A #blockHeader #btnSwitcher {
-  margin-left: auto;
-}
-#container0211A #blockHeader #btnSwitcher img {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
-}
-#container0211A #blockBody {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  overflow-y: auto;
-  padding-bottom: 0;
-}
-#container0211A section {
-  display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 10px;
-  background-color: #beec94;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+  flex-shrink: 0;
 }
-#container0211A section label {
+#container0211A #mainRow > button:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+#container0211A #mainRow > button:active {
+  background: #dbeafe;
+  transform: translateY(1px);
+}
+#container0211A #mainRow > button[disabled] {
+  background: #f9fafb;
+  color: #d1d5db;
+  border-color: #f3f4f6;
+  cursor: not-allowed;
+}
+#container0211A #mainRow > button.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* icon（btnSwitcher）不溢出 */
+#container0211A #btnSwitcher { overflow: hidden; }
+#container0211A #btnSwitcher img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+/* 设置按钮 ⚙ */
+#container0211A #btnSettings {
+  color: #6b7280;
+  font-size: 15px;
+}
+
+/* 清理数据：红色 */
+#container0211A #mainRow > button.hg-btn-danger {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+#container0211A #mainRow > button.hg-btn-danger:hover {
+  background: #fff1f2;
+  border-color: #f87171;
+  color: #dc2626;
+}
+
+/* ── Tooltip（悬停 0.5s 后显示在按钮下方）── */
+#container0211A #mainRow > button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  transition-delay: 0s;
+  z-index: 99999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+#container0211A #mainRow > button[data-tooltip]:hover::after {
+  opacity: 1;
+  transition-delay: 0.5s;
+}
+
+/* ══════════════════════════════════
+   设置子面板
+══════════════════════════════════ */
+#container0211A .hg-settings-panel {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: 4px;
+  min-width: 188px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+}
+#container0211A .hg-settings-panel.open { display: flex; }
+
+/* 分区标题 */
+#container0211A .hg-sp-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 8px 2px;
+}
+
+/* 分割线 */
+#container0211A .hg-sp-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 3px 2px;
+}
+
+/* 字幕行 */
+#container0211A .hg-caption-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 设置面板内的所有 button 重置 */
+#container0211A .hg-settings-panel button {
+  aspect-ratio: unset !important;
+  width: auto !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* 字幕设置按钮 */
+#container0211A .hg-sp-btn {
+  flex: 1;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 0 8px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  text-align: left !important;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s !important;
+}
+#container0211A .hg-sp-btn:hover {
+  background: #f0f7ff !important;
+  color: #1d4ed8 !important;
+}
+#container0211A .hg-sp-btn svg { flex-shrink: 0; }
+
+/* 自动字幕 pill */
+#container0211A .hg-caption-auto {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
   -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+#container0211A .hg-caption-auto:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+#container0211A .hg-caption-auto:has(input:checked) {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+  font-weight: 600;
+}
+#container0211A .hg-caption-auto input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  flex-shrink: 0;
+}
+
+/* Toggle 行（统一样式） */
+#container0211A .hg-settings-panel .hg-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   width: 100%;
-  height: 40px;
-  line-height: 40px;
-}
-#container0211A section button {
+  height: 32px;
+  border-radius: 8px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
   -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
-  width: 110px;
-  height: 40px;
-  border-radius: 5px;
-  padding: 7px 0;
-  margin-bottom: 5px;
-  border: #81a7ff solid 2px;
-  background-color: #acfffa;
+  user-select: none;
+  box-sizing: border-box;
+  transition: background 0.15s, color 0.15s;
 }
-#container0211A section button:hover {
-  color: #000;
-  background-color: #ffedac;
+#container0211A .hg-settings-panel .hg-toggle-label:hover {
+  background: #f0f7ff;
+  color: #1d4ed8;
 }
-#container0211A section button:active {
-  color: #000;
-  border-color: #ff6699;
-  background-color: #ff99ac;
-  transform: translateY(2px);
+#container0211A .hg-settings-panel .hg-toggle-label:has(input:checked) {
+  color: #2563eb;
 }
-#container0211A section button.selected {
-  color: #fff;
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+#container0211A .hg-settings-panel .hg-toggle-label svg {
+  flex-shrink: 0;
+  color: #94a3b8;
 }
-#container0211A section button.selected:active {
-  color: #000;
-  border-color: #ff6699;
-  background-color: #ff99ac;
-  transform: translateY(2px);
+#container0211A .hg-settings-panel .hg-toggle-label:hover svg,
+#container0211A .hg-settings-panel .hg-toggle-label:has(input:checked) svg {
+  color: #3b82f6;
 }
-#container0211A section button[disabled] {
-  background-color: #d7d7d7;
-  color: #777575;
+#container0211A .hg-settings-panel .hg-toggle-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  flex-shrink: 0;
 }
-#container0211A section textarea {
-  background-color: #f1ffe4;
-  width: 460px;
-  height: 56px;
-  resize: none;
-  padding: 5px 8px;
-  border-radius: 5px;
-}/*# sourceMappingURL=styleA.css.map */

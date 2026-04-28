@@ -1,19 +1,34 @@
 {
     "manifest_version": 3,
-    "name": "HeyGen Helper T1 / Auto Click",
-    "version": "1.4.0",
+    "name": "HeyGen Helper T2 / Auto Click",
+    "version": "2.2.0",
     "author": "James",
     "description": "HeyGen 辅助工具 自动点击",
     "icons": {
-        "16": "icon.png",
-        "48": "icon.png",
-        "128": "icon.png"
+        "16": "icon16.png",
+        "32": "icon32.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    },
+    "action": {
+        "default_icon": {
+            "16": "icon16.png",
+            "32": "icon32.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        },
+        "default_title": "HeyGen Helper"
     },
     "permissions": [
         "tabs",
         "activeTab",
         "scripting",
-        "storage"
+        "storage",
+        "downloads",
+        "browsingData",
+        "cookies",
+        "webRequest",
+        "webRequestBlocking"
     ],
     "content_scripts": [
         {
@@ -38,6 +53,8 @@
                 "js/proc05AvatarForm.js",
                 "js/proc06OutPutName.js",
                 "js/proc07Popover.js",
+                "js/proc08BatchDownload.js",
+                "js/proc09AutoRedirect.js",
                 "content.js"
             ],
             "css": [
@@ -58,7 +75,10 @@
             "resources": [
                 "js/*.js",
                 "css/*",
-                "icon.png"
+                "icon16.png",
+                "icon32.png",
+                "icon48.png",
+                "icon128.png"
             ]
         }
     ],

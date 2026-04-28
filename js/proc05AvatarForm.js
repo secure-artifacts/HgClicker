@@ -42,38 +42,10 @@ class proc05AvatarForm {
                     return { status: false, msg: `已尝试了3次，任务执行失败，${errorMsg}` };
                 }
 
-                if (isNext) {
-                    // await myUtil.sleep(300+ Math.random() * 300);
-
-                    let { status, msg } = await self.setAge();
-
-                    isNext = status;
-                    if (!isNext) {
-                        errorMsg = msg;
-                    }
-                }
-
-                if (isNext) {
-                    await myUtil.sleep(200 + Math.random() * 200);
-
-                    let { status, msg } = await self.setGender();
-
-                    isNext = status;
-                    if (!isNext) {
-                        errorMsg = msg;
-                    }
-                }
-
-                if (isNext) {
-                    await myUtil.sleep(200 + Math.random() * 200);
-
-                    let { status, msg } = await self.setEthnicity();
-
-                    isNext = status;
-                    if (!isNext) {
-                        errorMsg = msg;
-                    }
-                }
+                // Age / Gender / Ethnicity 步骤已停用，由用户手动填写
+                // if (isNext) { await self.setAge(); }
+                // if (isNext) { await self.setGender(); }
+                // if (isNext) { await self.setEthnicity(); }
 
                 if (isNext) {
                     await myUtil.sleep(200 + Math.random() * 200);
@@ -86,6 +58,8 @@ class proc05AvatarForm {
                     }
 
                     if (status) {
+                        // 等 Continue 按钮变黑（可点击）后自动点击
+                        await self.clickContinue();
                         return { status: true, msg: `任务已完成` };
                     }
                 }
@@ -200,23 +174,98 @@ class proc05AvatarForm {
         try {
             await myUtil.sleep(200 + Math.random() * 200);
 
-            if (1) {
-                let order = null;
-                let sign = await myXPath.getElement(`//div[@id="myAccountAlias"]`);
-                if (sign) {
-                    order = sign.getAttribute('account-order');
-                }
-                if (order) {
-                    let element = await myXPath.getElement(`//div[contains(text(), "Name")]/following-sibling::div/div/input`);
-                    if (element) {
-                        await mySimulate.setInputValue(element, order);
-                    }
-                }
+            const _firstNames = [
+                'Emma', 'Olivia', 'Ava', 'Sophia', 'Isabella',
+                'Mia', 'Charlotte', 'Amelia', 'Harper', 'Evelyn',
+                'Liam', 'Noah', 'Oliver', 'Elijah', 'James',
+                'Lucas', 'Mason', 'Ethan', 'Logan', 'Aiden',
+                'Sofia', 'Camila', 'Luna', 'Grace', 'Chloe',
+                'Penelope', 'Layla', 'Riley', 'Zoey', 'Nora',
+                'Lily', 'Eleanor', 'Hannah', 'Lillian', 'Addison',
+                'Aubrey', 'Ellie', 'Stella', 'Natalie', 'Zoe',
+                'Leah', 'Hazel', 'Violet', 'Aurora', 'Savannah',
+                'Audrey', 'Brooklyn', 'Bella', 'Claire', 'Skylar',
+                'Jackson', 'Sebastian', 'Mateo', 'Jack', 'Owen',
+                'Theodore', 'Aiden', 'Samuel', 'Joseph', 'John',
+                'David', 'Wyatt', 'Matthew', 'Luke', 'Asher',
+                'Carter', 'Julian', 'Grayson', 'Leo', 'Jayden',
+                'Gabriel', 'Isaac', 'Lincoln', 'Anthony', 'Hudson',
+                'Dylan', 'Ezra', 'Thomas', 'Charles', 'Christopher',
+                'Jaxon', 'Maverick', 'Josiah', 'Isaiah', 'Andrew',
+                'Elias', 'Joshua', 'Nathan', 'Caleb', 'Ryan',
+                'Adrian', 'Miles', 'Eli', 'Nolan', 'Christian',
+            ];
+
+            const _lastNames = [
+                'Smith', 'Johnson', 'Williams', 'Brown', 'Jones',
+                'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+                'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson',
+                'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+                'Lee', 'Perez', 'Thompson', 'White', 'Harris',
+                'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+                'Walker', 'Young', 'Allen', 'King', 'Wright',
+                'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+                'Green', 'Adams', 'Nelson', 'Baker', 'Hall',
+                'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts',
+            ];
+
+            const firstName = _firstNames[Math.floor(Math.random() * _firstNames.length)];
+            const lastName  = _lastNames[Math.floor(Math.random() * _lastNames.length)];
+            const randomName = `${firstName} ${lastName}`;
+
+            let element = await myXPath.getElement(`//div[contains(text(), "Name")]/following-sibling::div/div/input`);
+            if (element) {
+                await mySimulate.setInputValue(element, randomName);
             }
 
             return { status: true, msg: `执行成功` };
         } catch (error) {
             throw new Error(`Error-xxxxx-xxxx: ${error.message}`);
+        }
+    }
+
+    // 等待 Continue 按钮变黑（可点击）后自动点击
+    static async clickContinue() {
+        const self = this;
+        try {
+            const maxWait = 20000;
+            const interval = 3000;
+            const start = Date.now();
+
+            while (Date.now() - start < maxWait) {
+                const btn = await myXPath.getElement(`//button[normalize-space(text())="Continue"]`);
+
+                if (btn && !btn.disabled && btn.offsetParent !== null) {
+                    // 检查背景色是否为深色（黑色 = 可点击状态）
+                    try {
+                        const bg = window.getComputedStyle(btn).backgroundColor;
+                        const m  = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                        if (m) {
+                            const brightness = parseInt(m[1]) + parseInt(m[2]) + parseInt(m[3]);
+                            if (brightness < 150) {
+                                // 按钮已变黑，短暂延迟后点击
+                                await myUtil.sleep(300);
+                                btn.click();
+                                return { status: true, msg: `已点击 Continue` };
+                            }
+                        } else {
+                            // 无法解析颜色时，只要不是 disabled 就点击
+                            await myUtil.sleep(300);
+                            btn.click();
+                            return { status: true, msg: `已点击 Continue` };
+                        }
+                    } catch (_) {
+                        btn.click();
+                        return { status: true, msg: `已点击 Continue` };
+                    }
+                }
+
+                await myUtil.sleep(interval);
+            }
+
+            return { status: false, msg: `等待超时，Continue 按钮未就绪` };
+        } catch (error) {
+            throw new Error(`Error-proc05-continue: ${error.message}`);
         }
     }
 

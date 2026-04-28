@@ -393,6 +393,8 @@ class proc07Popover {
             if (!isDialog) {
                 let btn = await _getBtnGenerate();
                 if (btn) {
+                    // 在点击 Generate 前保存当前字幕设置
+                    try { await proc04Caption.saveCurrentSettings(); } catch (_) {}
                     await mySimulate.cursorClick(btn);
                     _watchSubmitBtn(); // 点了 Generate 后立即挂载，自动等待 dialog → Submit
                     return true;

@@ -73,6 +73,21 @@
             isProcessing: false,
             done: false,
         },
+        {
+            name: 'proc09',
+            textKey: 'Folders',   // Projects 页面特有的文本
+            fn: () => proc09AutoRedirect.start(),
+            isProcessing: false,
+            done: false,
+        },
+        {
+            name: 'proc04Caption',
+            textKey: null,              // 不用文字匹配，改用 URL 匹配
+            urlKey: '/create-v4/',      // 视频编辑器页面
+            fn: () => proc04Caption.autoApply(),
+            isProcessing: false,
+            done: false,   // 永不标记为 done，以便切换视频后再次触发
+        },
         // {
         //     name: 'proc07',
         //     textKey: 'Create more with Avatar IV',
@@ -86,7 +101,10 @@
         // 守卫0：全部已完成，直接 return（理论上此时 Observer 已 disconnect）
         if (_tasks.every(t => t.done)) return;
 
-        let pageText = document.body.textContent; // 只读一次，所有任务共用
+        // 只有当存在未完成且需要文字匹配的任务时才读 innerText/textContent
+        // （读 body 文本会触发整页 layout reflow，是 CPU 大户；URL-only 的任务用不到）
+        let _needsText = _tasks.some(t => !t.done && t.textKey);
+        let pageText = _needsText ? document.body.textContent : '';
 
         // console.log('[helper-heygen] _runTasks | url:', window.location.href);
 
@@ -99,11 +117,13 @@
 
             if (task.done) continue;
 
-            let textFound = pageText.includes(task.textKey);
-            // console.log(`[helper-heygen] ${task.name} | textFound:${textFound} | isProcessing:${task.isProcessing}`);
+            // 守卫1：文本嗅探 或 URL 匹配（二选一，满足其一即可触发）
+            let textFound = task.textKey ? pageText.includes(task.textKey) : false;
+            let urlFound  = task.urlKey  ? window.location.href.includes(task.urlKey) : false;
+            // console.log(`[helper-heygen] ${task.name} | textFound:${textFound} | urlFound:${urlFound} | isProcessing:${task.isProcessing}`);
 
-            if (!textFound) continue;        // 守卫1：文本嗅探
-            if (task.isProcessing) continue; // 守卫2：防并发
+            if (!textFound && !urlFound) continue; // 守卫1：文本嗅探 / URL 匹配
+            if (task.isProcessing) continue;       // 守卫2：防并发
 
             // console.log(`[helper-heygen] ${task.name} → 触发`);
 
@@ -134,7 +154,9 @@
 
     let _observer = new MutationObserver(() => {
         clearTimeout(_debounceTimer);
-        _debounceTimer = setTimeout(_runTasks, 1000);
+        // 稳定优先：2500ms 防抖，降低 DOM 频繁变动时的回调频率
+        // （自动化响应会稍慢，但能显著减轻主进程 IPC 压力）
+        _debounceTimer = setTimeout(_runTasks, 2500);
     });
 
     _observer.observe(document.body, {

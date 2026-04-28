@@ -18,12 +18,15 @@ class proc06OutPutName {
 
     static async start() {
         try {
-            //  https://app.heygen.com/create-v4/8aa0f10500e642e99587bc909028a482
-
-            // let pageUrl = window.location.href;
-            // if (!pageUrl.includes('/create-v')) {
-            //     return { status: true, msg: `不是目标页面` };
-            // }
+            // 检查是否启用自动填充人名
+            const enabled = await new Promise((resolve) => {
+                try {
+                    chrome.storage.local.get(['autoFillNameEnabled'], (r) => {
+                        resolve(r.autoFillNameEnabled !== false); // 默认开启
+                    });
+                } catch (_) { resolve(true); }
+            });
+            if (!enabled) return { status: true, msg: '自动填充人名已关闭' };
 
             let titleEl = await proc06OutPutName.getTitle();
             if (!titleEl) {
