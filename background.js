@@ -52,6 +52,45 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ── 批量下载：拦截网页下载，由扩展重新发起（规避多文件弹窗）──
 let _pendingDownloadWaiter = null;
 
+// ── webRequest blocking 拦截器：在浏览器创建下载项之前拦截，防止「多文件下载」弹窗 ──
+let _blockingListener = null;
+
+function _removeBlockingListener() {
+    if (_blockingListener) {
+        try { chrome.webRequest.onBeforeRequest.removeListener(_blockingListener); } catch (_) {}
+        _blockingListener = null;
+    }
+}
+
+function _addBlockingListener(onCapture) {
+    _removeBlockingListener();
+    _blockingListener = function(details) {
+        if (!_pendingDownloadWaiter) { _removeBlockingListener(); return {}; }
+        const url = details.url;
+        const isVideo = url.includes('.mp4') || url.includes('heygen') ||
+                        url.includes('video') || /\.(mov|webm|mkv|avi)(\?|$)/i.test(url);
+        const fromHeygen = !details.originUrl || details.originUrl.includes('heygen.com');
+        if (!isVideo || !fromHeygen) return {};
+        _removeBlockingListener();
+        try {
+            const p = new URL(url).pathname.split('/');
+            const filename = p[p.length - 1] || '';
+            onCapture(url, filename);
+        } catch (_) { onCapture(url, ''); }
+        return { cancel: true };
+    };
+    try {
+        chrome.webRequest.onBeforeRequest.addListener(
+            _blockingListener,
+            { urls: ['<all_urls>'] },
+            ['blocking']
+        );
+    } catch (_) {
+        // Firefox MV3 若不支持 blocking，静默回退到 onCreated 路径
+        _blockingListener = null;
+    }
+}
+
 // ── 全局下载队列：跨容器串行，防止多账号并发触发 CDN 限速 ──
 const _downloadQueue = [];
 let   _downloadBusy  = false;
@@ -124,11 +163,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
             const timer = setTimeout(() => {
                 if (_pendingDownloadWaiter) {
+                    _removeBlockingListener();
                     _pendingDownloadWaiter = null;
                     sendResponse({ success: false, reason: "timeout" });
                 }
             }, timeoutMs);
             _pendingDownloadWaiter = { resolve: sendResponse, timer };
+            // 优先用 webRequest blocking 拦截（Firefox MV3 支持时阻断请求，不触发多文件弹窗）
+            _addBlockingListener((url, filename) => {
+                if (_pendingDownloadWaiter) {
+                    clearTimeout(_pendingDownloadWaiter.timer);
+                    _pendingDownloadWaiter = null;
+                    sendResponse({ success: true, url, filename });
+                }
+            });
             return true;
         }
 
@@ -139,6 +187,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
 
         case "cancelDownloadWait":
+            _removeBlockingListener();
             if (_pendingDownloadWaiter) {
                 clearTimeout(_pendingDownloadWaiter.timer);
                 _pendingDownloadWaiter.resolve({ success: false, reason: "cancelled" });
@@ -203,8 +252,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 chrome.browsingData.remove(
                     { since: 0 },
                     {
-                        cookies:  true,   // 退出登录必须
-                        downloads: true,  // 下载历史
+                        cookies:   true,   // 退出登录必须
+                        downloads: true,   // 下载历史
+                        indexedDB: true,   // 可能存 token
                     },
                     () => {
                         if (chrome.runtime.lastError) {
