@@ -10,8 +10,8 @@ HeyGen 辅助浏览器插件，自动处理 [app.heygen.com](https://app.heygen.
 
 | 分支 | 适用浏览器 |
 |------|-----------|
-| `chrome` | Chrome / Edge（Manifest V3） |
-| `main` | Firefox |
+| `main` | Chrome / Edge（Manifest V3） |
+| `firefox` | Firefox |
 
 ---
 
@@ -37,14 +37,14 @@ HeyGen 辅助浏览器插件，自动处理 [app.heygen.com](https://app.heygen.
 
 ### Chrome / Edge
 
-1. 切换到 `chrome` 分支，下载或 Clone 代码
+1. 切换到 `main` 分支，下载或 Clone 代码
 2. 打开 `chrome://extensions/`，开启右上角「开发者模式」
 3. 点击「加载已解压的扩展程序」，选择项目根目录
 4. 访问 `https://app.heygen.com` 即可使用
 
 ### Firefox
 
-1. 切换到 `main` 分支，下载或 Clone 代码
+1. 切换到 `firefox` 分支，下载或 Clone 代码
 2. 打开 `about:debugging#/runtime/this-firefox`
 3. 点击「临时载入附加组件」，选择项目根目录下的 `manifest.json`
 
