@@ -285,9 +285,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         }
                         // 清除扩展存储中的字幕预设
                         chrome.storage.local.remove(['captionPreset']);
-                        // 4. 手动清除所有标签页的 localStorage / sessionStorage
+                        // 4. 手动清除 HeyGen 标签页的 localStorage / sessionStorage
                         //    （Firefox browsingData 不支持这两项）
-                        chrome.tabs.query({}, (tabs) => {
+                        chrome.tabs.query({ url: 'https://app.heygen.com/*' }, (tabs) => {
                             for (const tab of (tabs || [])) {
                                 try {
                                     chrome.tabs.executeScript(tab.id, {
