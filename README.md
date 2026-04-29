@@ -151,3 +151,66 @@ gh attestation verify ./hgclicker-<tag>.zip --repo secure-artifacts/HgClicker
 ```
 
 Successful verification means the artifact provenance matches the official repository workflow.
+
+## 如何发布新版本
+
+本项目使用 GitHub Actions 自动构建和发布。每次发布新版本只需要创建一个 Git Tag 并推送即可。
+
+### 发布步骤
+
+#### 1. 确保代码已提交并推送
+
+在发布之前，确保你的所有代码改动已经提交并推送到 GitHub：
+
+```bash
+git status
+git add .
+git commit -m "你的改动说明"
+git push origin main
+```
+
+#### 2. 创建版本 Tag
+
+Git Tag 是一个版本标记，用于标识发布的版本号。版本号格式为 `v主版本.次版本.修订版本`，例如 `v1.0.0`、`v1.1.0`、`v2.0.0`。
+
+```bash
+git tag -a v2.3.1 -m "Release version 2.3.1"
+```
+
+#### 3. 推送 Tag 触发自动构建
+
+```bash
+git push origin v2.3.1
+```
+
+推送后，GitHub Actions 会自动执行以下操作：
+
+1. 打包浏览器扩展 zip
+2. 生成安全签名 Attestation
+3. 创建 Release 并上传构建产物
+
+#### 4. 查看构建结果
+
+- 构建进度：访问项目的 Actions 页面查看
+- 发布结果：访问项目的 Releases 页面查看已发布的文件
+
+### 版本号说明
+
+| 版本号格式 | 什么时候用 | 示例 |
+|-----------|-----------|------|
+| `vX.0.0` | 重大更新、不兼容改动 | `v2.0.0` |
+| `vX.Y.0` | 新增功能 | `v2.4.0` |
+| `vX.Y.Z` | 修复 bug | `v2.3.1` |
+
+### 如果构建失败怎么办
+
+1. 访问项目的 Actions 页面查看错误日志
+2. 修复代码或 workflow 问题
+3. 删除失败的 tag 并重新创建：
+
+```bash
+git tag -d v2.3.1
+git push origin :refs/tags/v2.3.1
+git tag -a v2.3.1 -m "Release version 2.3.1"
+git push origin v2.3.1
+```
