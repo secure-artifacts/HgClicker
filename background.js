@@ -69,7 +69,12 @@ function _addBlockingListener(onCapture) {
         const url = details.url;
         const isVideo = url.includes('.mp4') || url.includes('heygen') ||
                         url.includes('video') || /\.(mov|webm|mkv|avi)(\?|$)/i.test(url);
-        const fromHeygen = !details.originUrl || details.originUrl.includes('heygen.com');
+        const fromHeygen = !details.originUrl || (() => {
+            try {
+                const host = new URL(details.originUrl).hostname;
+                return host === 'heygen.com' || host.endsWith('.heygen.com');
+            } catch (_) { return false; }
+        })();
         if (!isVideo || !fromHeygen) return {};
         _removeBlockingListener();
         try {
