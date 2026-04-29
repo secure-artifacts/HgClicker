@@ -131,3 +131,23 @@ background.js        Service Worker（后台任务）
 ## License
 
 MIT
+
+---
+
+## Download
+
+Download the latest signed release asset from:
+
+https://github.com/secure-artifacts/HgClicker/releases
+
+For this browser extension, download `hgclicker-<tag>.zip`, unzip it to a stable local folder, then load the unzipped folder from `chrome://extensions` with Developer mode enabled.
+
+## Verify provenance
+
+After downloading the zip file, verify that it was built and uploaded by the official GitHub Actions workflow:
+
+```bash
+gh attestation verify ./hgclicker-<tag>.zip --repo secure-artifacts/HgClicker
+```
+
+Successful verification means the artifact provenance matches the official repository workflow.
