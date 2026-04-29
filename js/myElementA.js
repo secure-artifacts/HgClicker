@@ -179,20 +179,6 @@ class myElementA {
                         <input type="checkbox" name="chkAutoRedirect">
                         <span>自动跳转</span>
                     </label>
-                    <div class="hg-redirect-delay-row">
-                        <span class="hg-redirect-delay-label">跳转延迟</span>
-                        <input type="number" name="redirectDelay" min="1" max="30" step="1" value="5" class="hg-redirect-delay-input">
-                        <span class="hg-redirect-delay-unit">秒</span>
-                    </div>
-                    <label class="hg-toggle-label">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
-                        <input type="checkbox" name="chkAvatarClick">
-                        <span>自动点击 Look</span>
-                    </label>
-                    <div class="hg-avatar-click-row">
-                        <span name="avatarClickProgress">进度：第 1 个</span>
-                        <button name="btnResetAvatarClick" class="hg-sp-btn hg-sp-btn-sm">重置</button>
-                    </div>
                     <div class="hg-sp-divider"></div>
                     <div class="hg-sp-section-title">头像表单</div>
                     <label class="hg-toggle-label">
@@ -561,28 +547,11 @@ class myElementA {
                 const btn   = document.querySelector('#container0211A button[name="btnSettings"]');
                 const panel = document.querySelector('#container0211A div[name="settingsPanel"]');
                 if (btn && panel) {
-                    let autoCloseTimer = null;
-
-                    const closePanel = () => {
-                        panel.classList.remove('open');
-                        btn.classList.remove('selected');
-                        btn.textContent = '⚙ 设置';
-                    };
-
                     btn.addEventListener('click', () => {
                         const isOpen = panel.classList.contains('open');
-                        clearTimeout(autoCloseTimer);
                         panel.classList.toggle('open', !isOpen);
                         btn.classList.toggle('selected', !isOpen);
                         btn.textContent = isOpen ? '⚙ 设置' : '⚙ 设置 ▴';
-                    });
-
-                    panel.addEventListener('mouseleave', () => {
-                        autoCloseTimer = setTimeout(closePanel, 2000);
-                    });
-
-                    panel.addEventListener('mouseenter', () => {
-                        clearTimeout(autoCloseTimer);
                     });
                 }
             }
@@ -748,50 +717,6 @@ class myElementA {
                     });
                     checkbox.addEventListener('change', (event) => {
                         chrome.storage.local.set({ autoRedirectEnabled: event.target.checked });
-                    });
-                }
-            }
-
-            // 跳转延迟秒数
-            if (1) {
-                const delayInput = document.querySelector('#container0211A input[name="redirectDelay"]');
-                if (delayInput) {
-                    chrome.storage.local.get(['autoRedirectDelay'], (result) => {
-                        delayInput.value = result.autoRedirectDelay ?? 5;
-                    });
-                    delayInput.addEventListener('change', (event) => {
-                        const val = Math.max(1, Math.min(30, parseInt(event.target.value, 10) || 5));
-                        event.target.value = val;
-                        chrome.storage.local.set({ autoRedirectDelay: val });
-                    });
-                }
-            }
-
-            // 自动点击 Look 开关 + 进度重置
-            if (1) {
-                const chk = document.querySelector('#container0211A input[name="chkAvatarClick"]');
-                if (chk) {
-                    chrome.storage.local.get(['avatarClickEnabled'], (result) => {
-                        chk.checked = result.avatarClickEnabled === true;
-                    });
-                    chk.addEventListener('change', (e) => {
-                        chrome.storage.local.set({ avatarClickEnabled: e.target.checked });
-                    });
-                }
-
-                const progressEl = document.querySelector('#container0211A [name="avatarClickProgress"]');
-                const refreshProgress = () => {
-                    if (!progressEl) return;
-                    chrome.storage.local.get(['avatarClickIndex'], (r) => {
-                        progressEl.textContent = `进度：第 ${((r.avatarClickIndex ?? 0)) + 1} 个`;
-                    });
-                };
-                refreshProgress();
-
-                const btnReset = document.querySelector('#container0211A button[name="btnResetAvatarClick"]');
-                if (btnReset) {
-                    btnReset.addEventListener('click', () => {
-                        chrome.storage.local.set({ avatarClickIndex: 0 }, refreshProgress);
                     });
                 }
             }

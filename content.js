@@ -81,14 +81,6 @@
             done: false,
         },
         {
-            name: 'proc10',
-            textKey: null,
-            urlKey: '/avatar/my-avatars',
-            fn: () => proc10AvatarClick.start(),
-            isProcessing: false,
-            done: false,
-        },
-        {
             name: 'proc04Caption',
             textKey: null,
             urlKey: '/create-v4/',
