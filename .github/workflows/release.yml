@@ -1,0 +1,38 @@
+name: Release Browser Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package extension
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp manifest.json background.js content.js icon16.png icon32.png icon48.png icon128.png dist/
+          cp -R css js dist/
+          cd dist
+          zip -r "../hgclicker-${{ github.ref_name }}.zip" .
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: '*.zip'
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.zip'
+          generate_release_notes: true
