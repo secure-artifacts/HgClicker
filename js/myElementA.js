@@ -36,11 +36,6 @@ class myElementA {
      * 控件显示或隐藏
      */
     static async toggleVisibility() {
-        //  const self = this;
-
-        // btn-outline-warning
-        // btn-outline-success
-
         try {
             const container = document.querySelector('#container0211A');
             const button = document.querySelector('#container0211A #btnSwitcher');
@@ -50,10 +45,6 @@ class myElementA {
 
             let _icon = `<img src="${chrome.runtime.getURL('icon128.png')}">`;
 
-            // ── 自动收起计时器 ──
-            let _autoHideTimer = null;
-            const AUTO_HIDE_DELAY = 3000; // 3 秒
-
             const _collapse = () => {
                 button.setAttribute('state', 'hidden');
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
@@ -62,59 +53,20 @@ class myElementA {
                 container.classList.add('body-hidden');
             };
 
-            const _startAutoHide = () => {
-                _clearAutoHide();
-                _autoHideTimer = setTimeout(() => {
-                    if ((button.getAttribute('state') || 'hidden') === 'visible') {
-                        _collapse();
-                    }
-                }, AUTO_HIDE_DELAY);
-            };
-
-            const _clearAutoHide = () => {
-                if (_autoHideTimer !== null) {
-                    clearTimeout(_autoHideTimer);
-                    _autoHideTimer = null;
-                }
-            };
-
-            // 鼠标进入面板 → 取消计时
-            container.addEventListener('mouseenter', () => {
-                _clearAutoHide();
-            });
-
-            // 鼠标离开面板 → 开始倒计时
-            container.addEventListener('mouseleave', () => {
-                if ((button.getAttribute('state') || 'hidden') === 'visible') {
-                    _startAutoHide();
-                }
-            });
-
-            // ── 展开面板 ──
             const _expand = () => {
                 button.setAttribute('state', 'visible');
                 button.innerHTML = `${_icon}`;
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
                 button.classList.add('btn-success');
                 container.classList.remove('body-hidden');
-                _startAutoHide();
             };
-
-            // 鼠标悬停在图标上 → 立即展开
-            button.addEventListener('mouseenter', () => {
-                if ((button.getAttribute('state') || 'hidden') === 'hidden') {
-                    _clearAutoHide();
-                    _expand();
-                }
-            });
 
             // 点击图标 → 切换展开/收起
             button.addEventListener('click', (event) => {
+                if (event._fromDrag) return;
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
-
                 let state = button.getAttribute('state') || 'hidden';
                 if (state === 'visible') {
-                    _clearAutoHide();
                     _collapse();
                 } else {
                     _expand();
@@ -124,6 +76,49 @@ class myElementA {
         } catch (error) {
             throw new Error(`Error-myelement-0001: ${error.message}`);
         }
+    }
+
+    static _initDrag(container) {
+        const THRESHOLD = 5;
+        let startX, startY, startLeft, startTop, didDrag;
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            if (e.target.closest('button, input, label, a')) return;
+
+            const rect = container.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = rect.left;
+            startTop = rect.top;
+            didDrag = false;
+
+            const onMove = (e) => {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (!didDrag && Math.abs(dx) < THRESHOLD && Math.abs(dy) < THRESHOLD) return;
+                didDrag = true;
+                container.style.cursor = 'grabbing';
+                let newLeft = Math.max(0, Math.min(window.innerWidth - container.offsetWidth, startLeft + dx));
+                let newTop  = Math.max(0, Math.min(window.innerHeight - container.offsetHeight, startTop + dy));
+                container.style.left  = newLeft + 'px';
+                container.style.top   = newTop + 'px';
+                container.style.right = 'auto';
+            };
+
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                container.style.cursor = '';
+                if (didDrag) {
+                    const r = container.getBoundingClientRect();
+                    chrome.storage.local.set({ panelPosition: { left: r.left, top: r.top } });
+                }
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
     }
 
     /**
@@ -167,12 +162,6 @@ class myElementA {
                 <div name="settingsPanel" class="hg-settings-panel">
                     <div class="hg-sp-section-title">字幕</div>
                     <div class="hg-caption-row">
-                        <label class="hg-caption-auto">
-                            <input type="checkbox" name="chkAutoCaption">
-                            <span>自动</span>
-                        </label>
-                    </div>
-                    <div class="hg-caption-row">
                         <button name="btnSaveCaption" class="hg-sp-btn">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                             保存当前样式
@@ -190,6 +179,18 @@ class myElementA {
                         <input type="checkbox" name="chkAutoRedirect">
                         <span>自动跳转</span>
                     </label>
+                    <div class="hg-sp-divider"></div>
+                    <div class="hg-sp-section-title">头像表单</div>
+                    <label class="hg-toggle-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <input type="radio" name="avatarFormMode" value="randomName">
+                        <span>随机人名 + 自动属性</span>
+                    </label>
+                    <label class="hg-toggle-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+                        <input type="radio" name="avatarFormMode" value="fixedAttr">
+                        <span>跳过人名，填写属性</span>
+                    </label>
                 </div>
                 `;
 
@@ -200,6 +201,18 @@ class myElementA {
                 element.classList.add('container-0211');
                 element.innerHTML = html;
                 document.body.appendChild(element);
+
+                chrome.storage.local.get(['panelPosition'], (result) => {
+                    if (result.panelPosition) {
+                        const maxLeft = window.innerWidth  - element.offsetWidth;
+                        const maxTop  = window.innerHeight - element.offsetHeight;
+                        element.style.left  = Math.max(0, Math.min(maxLeft, result.panelPosition.left)) + 'px';
+                        element.style.top   = Math.max(0, Math.min(maxTop,  result.panelPosition.top))  + 'px';
+                        element.style.right = 'auto';
+                    }
+                });
+
+                myElementA._initDrag(element);
             }
         } catch (error) {
             throw new Error(`Error-myelement-0002: ${error.message}`);
@@ -667,19 +680,6 @@ class myElementA {
                 }
             }
 
-            // 自动字幕开关
-            if (1) {
-                const checkbox = document.querySelector('#container0211A input[name="chkAutoCaption"]');
-                if (checkbox) {
-                    chrome.storage.local.get(['autoCaptionEnabled'], (result) => {
-                        checkbox.checked = result.autoCaptionEnabled === true;
-                    });
-                    checkbox.addEventListener('change', (event) => {
-                        chrome.storage.local.set({ autoCaptionEnabled: event.target.checked });
-                    });
-                }
-            }
-
             // 保存当前字幕样式按钮
             if (1) {
                 const btn = document.querySelector('#container0211A button[name="btnSaveCaption"]');
@@ -692,7 +692,7 @@ class myElementA {
                         btn.disabled = true;
                         try {
                             await proc04Caption.saveCurrentSettings();
-                            chrome.storage.local.get(['captionPreset'], (r) => {
+                            chrome.storage.sync.get(['captionPreset'], (r) => {
                                 if (r && r.captionPreset && Object.keys(r.captionPreset).length > 0) {
                                     myElementA._showQuickToast('✅ 字幕样式已保存', 2500);
                                 } else {
@@ -730,6 +730,24 @@ class myElementA {
                     });
                     checkbox.addEventListener('change', (event) => {
                         chrome.storage.local.set({ autoFillNameEnabled: event.target.checked });
+                    });
+                }
+            }
+
+            // 头像表单模式
+            if (1) {
+                const radios = document.querySelectorAll('#container0211A input[name="avatarFormMode"]');
+                if (radios.length) {
+                    chrome.storage.local.get(['avatarFormMode'], (result) => {
+                        const mode = result.avatarFormMode || 'randomName';
+                        radios.forEach(r => { r.checked = r.value === mode; });
+                    });
+                    radios.forEach(r => {
+                        r.addEventListener('change', (e) => {
+                            if (e.target.checked) {
+                                chrome.storage.local.set({ avatarFormMode: e.target.value });
+                            }
+                        });
                     });
                 }
             }
