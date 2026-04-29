@@ -5,6 +5,13 @@
     "author": "James",
     "description": "HeyGen 辅助工具 自动点击",
 
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "hgclicker@heygen-helper",
+            "strict_min_version": "109.0"
+        }
+    },
+
     "icons": {
         "16": "icon16.png",
         "32": "icon32.png",
@@ -94,7 +101,7 @@
     },
 
     "background": {
-        "service_worker": "background.js"
+        "scripts": ["background.js"]
     },
 
     "content_security_policy": {

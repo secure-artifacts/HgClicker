@@ -17,14 +17,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Package extension
+      - name: Package Chrome extension
         run: |
           set -euo pipefail
-          mkdir -p dist
-          cp manifest.json background.js content.js icon16.png icon32.png icon48.png icon128.png dist/
-          cp -R css js dist/
-          cd dist
-          zip -r "../hgclicker-${{ github.ref_name }}.zip" .
+          mkdir -p dist-chrome
+          cp manifest.json background.js content.js icon16.png icon32.png icon48.png icon128.png dist-chrome/
+          cp -R css js dist-chrome/
+          cd dist-chrome
+          zip -r "../hgclicker-${{ github.ref_name }}-chrome.zip" .
+
+      - name: Package Firefox extension
+        run: |
+          set -euo pipefail
+          mkdir -p dist-firefox
+          cp manifest.firefox.json dist-firefox/manifest.json
+          cp background.js content.js icon16.png icon32.png icon48.png icon128.png dist-firefox/
+          cp -R css js dist-firefox/
+          cd dist-firefox
+          zip -r "../hgclicker-${{ github.ref_name }}-firefox.zip" .
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
