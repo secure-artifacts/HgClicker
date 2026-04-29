@@ -12,14 +12,6 @@ class myWebSocket {
         // const self = this;
 
         try {
-            // let params = {
-            //     sendKey: 'lemon/to-serxxver-send-fetch',
-            //     sendRole: 'fb-cherry-evaluate',
-            //     isResponse: true, // 是否等待回复
-            //     status: true,
-            //     msg: `请求抓取数据`,
-            //     payload: { groupId },
-            // };
             let params = await callbackSend();
 
             if (!(params && params.sendKey)) {
