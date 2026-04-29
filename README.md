@@ -82,7 +82,7 @@ js/
 ├── myXPath.js       XPath 工具封装
 ├── proc01-09*.js    各自动化流程模块
 content.js           主入口，MutationObserver 统一调度
-background.js        Service Worker（后台任务）
+background.js        Background Scripts（后台任务）
 ```
 
 ---
@@ -140,7 +140,7 @@ Download the latest signed release asset from:
 
 https://github.com/secure-artifacts/HgClicker/releases
 
-For this browser extension, download `hgclicker-<tag>.zip`, unzip it to a stable local folder, then load the unzipped folder from `chrome://extensions` with Developer mode enabled.
+For the Firefox branch, download `hgclicker-<tag>.zip`, unzip it to a stable local folder, then load `manifest.json` from `about:debugging#/runtime/this-firefox`.
 
 ## Verify provenance
 

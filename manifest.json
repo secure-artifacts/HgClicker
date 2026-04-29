@@ -29,7 +29,8 @@
         "downloads",
         "browsingData",
         "cookies",
-        "webRequest"
+        "webRequest",
+        "webRequestBlocking"
     ],
 
     "content_scripts": [
@@ -94,7 +95,21 @@
     },
 
     "background": {
-        "service_worker": "background.js"
+        "scripts": [
+            "background.js"
+        ]
+    },
+
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "hgclicker@secure-artifacts.local",
+            "data_collection_permissions": {
+                "required": [
+                    "none"
+                ]
+            },
+            "strict_min_version": "140.0"
+        }
     },
 
     "content_security_policy": {
