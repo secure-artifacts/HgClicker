@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Package Firefox extension
+        run: |
+          zip -r HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip . \
+            --exclude '*.git*' \
+            --exclude '.github/*' \
+            --exclude '*.DS_Store'
+
+      - name: Generate attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip
+          generate_release_notes: true
