@@ -1,40 +1,43 @@
-name: Release
+name: Release Browser Extension
 
 on:
   push:
     tags:
       - 'v*'
 
-permissions:
-  id-token: write
-  contents: write
-  attestations: write
-
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-
-      - name: Package Firefox extension
+      - name: Package Extension
         run: |
-          zip -r HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip . \
-            --exclude '*.git*' \
-            --exclude '.github/*' \
-            --exclude '*.DS_Store'
+          zip -r heygen-helper-firefox-${{ github.ref_name }}.zip \
+            background.js \
+            content.js \
+            manifest.json \
+            icon16.png \
+            icon32.png \
+            icon48.png \
+            icon128.png \
+            icon_data.js \
+            css/ \
+            js/
 
-      - name: Generate attestation
+      - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip
+          subject-path: '*.zip'
 
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: HgClicker-firefox-${{ steps.version.outputs.VERSION }}.zip
+          files: '*.zip'
           generate_release_notes: true
