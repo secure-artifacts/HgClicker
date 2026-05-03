@@ -17,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Package Extension
+      - name: Package Firefox Extension
         run: |
           zip -r heygen-helper-firefox-${{ github.ref_name }}.zip \
             background.js \
@@ -30,6 +30,23 @@ jobs:
             icon_data.js \
             css/ \
             js/
+
+      - name: Package Chrome Extension
+        run: |
+          jq 'del(.browser_specific_settings)' manifest.json > manifest.chrome.json
+          mv manifest.chrome.json manifest.json
+          zip -r heygen-helper-chrome-${{ github.ref_name }}.zip \
+            background.js \
+            content.js \
+            manifest.json \
+            icon16.png \
+            icon32.png \
+            icon48.png \
+            icon128.png \
+            icon_data.js \
+            css/ \
+            js/
+          git checkout manifest.json
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
