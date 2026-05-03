@@ -257,6 +257,11 @@
   display: block !important;
 }
 
+/* ── 拖拽光标 ── */
+#container0211A:not(.body-hidden) {
+  cursor: grab;
+}
+
 /* ── 主行（单排图标）── */
 #container0211A #mainRow {
   display: flex;
@@ -431,45 +436,6 @@
 }
 #container0211A .hg-sp-btn svg { flex-shrink: 0; }
 
-/* 自动字幕 pill */
-#container0211A .hg-caption-auto {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-user-select: none;
-  user-select: none;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-#container0211A .hg-caption-auto:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #2563eb;
-}
-#container0211A .hg-caption-auto:has(input:checked) {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  color: #2563eb;
-  font-weight: 600;
-}
-#container0211A .hg-caption-auto input[type="checkbox"] {
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: #3b82f6;
-  flex-shrink: 0;
-}
 
 /* Toggle 行（统一样式） */
 #container0211A .hg-settings-panel .hg-toggle-label {
@@ -506,11 +472,58 @@
 #container0211A .hg-settings-panel .hg-toggle-label:has(input:checked) svg {
   color: #3b82f6;
 }
-#container0211A .hg-settings-panel .hg-toggle-label input[type="checkbox"] {
+#container0211A .hg-settings-panel .hg-toggle-label input[type="checkbox"],
+#container0211A .hg-settings-panel .hg-toggle-label input[type="radio"] {
   width: 14px;
   height: 14px;
   margin: 0;
   cursor: pointer;
   accent-color: #3b82f6;
   flex-shrink: 0;
+}
+
+#container0211A .hg-redirect-delay-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+#container0211A .hg-redirect-delay-label {
+  flex: 1;
+}
+#container0211A .hg-redirect-delay-input {
+  width: 44px;
+  padding: 2px 5px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+#container0211A .hg-redirect-delay-input:focus {
+  border-color: #3b82f6;
+}
+#container0211A .hg-redirect-delay-unit {
+  color: #64748b;
+}
+
+#container0211A .hg-avatar-click-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+#container0211A .hg-avatar-click-row span {
+  flex: 1;
+}
+#container0211A .hg-sp-btn-sm {
+  padding: 2px 10px;
+  font-size: 11px;
+  height: auto;
 }

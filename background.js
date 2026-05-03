@@ -36,88 +36,106 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 chrome.runtime.onStartup.addListener(_setActionIcon);
 
-chrome.commands.onCommand.addListener((command) => {
+// Firefox 不支持 chrome.windows API，改用 chrome.tabs.query
+chrome.commands.onCommand.addListener(async (command) => {
     if (command !== 'generate-video') return;
-    chrome.windows.getLastFocused({ populate: true }, (win) => {
-        if (!win) return;
-        let activeTab = win.tabs.find(tab => tab.active);
-        if (activeTab) {
-            chrome.tabs.sendMessage(activeTab.id, { action: 'shortcutCtrlB' });
+    try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs && tabs.length > 0) {
+            chrome.tabs.sendMessage(tabs[0].id, { action: 'shortcutCtrlB' });
         }
-    });
+    } catch (e) {
+        console.warn('[HeyGen Helper] 快捷键消息发送失败:', e.message);
+    }
 });
 
-// ── 批量下载：拦截网页下载，由扩展重新发起（规避多文件弹窗）──
+// ── 批量下载：稳定版（Firefox / Chrome 通用）──
+
+// 当前等待中的下载捕获
 let _pendingDownloadWaiter = null;
 
-// ── webRequest blocking 拦截器：在浏览器创建下载项之前拦截，防止「多文件下载」弹窗 ──
-let _blockingListener = null;
-
-function _removeBlockingListener() {
-    if (_blockingListener) {
-        try { chrome.webRequest.onBeforeRequest.removeListener(_blockingListener); } catch (_) {}
-        _blockingListener = null;
-    }
-}
-
-function _addBlockingListener(onCapture) {
-    _removeBlockingListener();
-    _blockingListener = function(details) {
-        if (!_pendingDownloadWaiter) { _removeBlockingListener(); return {}; }
-        const url = details.url;
-        const isVideo = url.includes('.mp4') || url.includes('heygen') ||
-                        url.includes('video') || /\.(mov|webm|mkv|avi)(\?|$)/i.test(url);
-        const fromHeygen = !details.initiator || details.initiator.includes('heygen.com');
-        if (!isVideo || !fromHeygen) return {};
-        _removeBlockingListener();
-        try {
-            const p = new URL(url).pathname.split('/');
-            const filename = p[p.length - 1] || '';
-            onCapture(url, filename);
-        } catch (_) { onCapture(url, ''); }
-        return { cancel: true }; // 阻断请求 → 浏览器不创建下载项 → 不弹多文件弹窗
-    };
-    chrome.webRequest.onBeforeRequest.addListener(
-        _blockingListener,
-        { urls: ['<all_urls>'] },
-        ['blocking']
-    );
-}
-
-// ── 全局下载队列：跨容器串行，防止多账号并发触发 CDN 限速 ──
+// ── 全局下载队列（串行，防限速）──
 const _downloadQueue = [];
-let   _downloadBusy  = false;
-const _DOWNLOAD_INTERVAL_MS = 3000; // 两次下载之间的最小间隔（毫秒）
+let _downloadBusy = false;
+const _DOWNLOAD_INTERVAL_MS = 3000;
 
-function _processDownloadQueue() {
+// ── URL 规范化（解决 Firefox blob 无法下载问题）──
+async function _normalizeUrl(url) {
+    if (!url) return url;
+
+    // Firefox 对 blob: 不能直接下载
+    if (url.startsWith("blob:")) {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return URL.createObjectURL(blob);
+        } catch (e) {
+            console.warn("blob 转换失败:", e);
+            return url;
+        }
+    }
+
+    return url;
+}
+
+// ── 下载队列处理（串行执行）──
+async function _processDownloadQueue() {
     if (_downloadBusy || _downloadQueue.length === 0) return;
+
     _downloadBusy = true;
 
     const { url, filename, resolve } = _downloadQueue.shift();
-    chrome.downloads.download(
-        { url, filename: filename || undefined, conflictAction: 'uniquify' },
-        (downloadId) => {
-            if (chrome.runtime.lastError) {
-                resolve({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-                resolve({ success: true, downloadId });
+
+    try {
+        const finalUrl = await _normalizeUrl(url);
+
+        chrome.downloads.download(
+            {
+                url: finalUrl,
+                filename: filename || undefined,
+                conflictAction: "uniquify",
+                saveAs: false
+            },
+            (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    resolve({
+                        success: false,
+                        error: chrome.runtime.lastError.message
+                    });
+                } else {
+                    resolve({
+                        success: true,
+                        downloadId
+                    });
+                }
+
+                setTimeout(() => {
+                    _downloadBusy = false;
+                    _processDownloadQueue();
+                }, _DOWNLOAD_INTERVAL_MS);
             }
-            // 等待间隔后再处理下一个
-            setTimeout(() => {
-                _downloadBusy = false;
-                _processDownloadQueue();
-            }, _DOWNLOAD_INTERVAL_MS);
-        }
-    );
+        );
+    } catch (err) {
+        resolve({
+            success: false,
+            error: err.message
+        });
+
+        _downloadBusy = false;
+        _processDownloadQueue();
+    }
 }
 
+// ── 监听下载创建（⚠️ 不再 cancel，避免 Firefox 风控）──
 chrome.downloads.onCreated.addListener((item) => {
     if (!_pendingDownloadWaiter) return;
 
     const url = item.url || "";
+
     const isTarget =
-        url.includes("heygen") || url.includes(".mp4") ||
-        url.includes("blob:") || url.includes("video") ||
+        url.includes("heygen") ||
+        url.includes(".mp4") ||
+        url.includes("video") ||
         item.mime === "video/mp4" ||
         (item.filename || "").endsWith(".mp4");
 
@@ -125,10 +143,14 @@ chrome.downloads.onCreated.addListener((item) => {
 
     const { resolve, timer } = _pendingDownloadWaiter;
     _pendingDownloadWaiter = null;
+
     clearTimeout(timer);
 
-    chrome.downloads.cancel(item.id, () => {
-        resolve({ success: true, url: item.url, filename: item.filename || "" });
+    // ❗ 关键：不再 cancel
+    resolve({
+        success: true,
+        url: item.url,
+        filename: item.filename || ""
     });
 });
 
@@ -150,26 +172,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case "interceptNextDownload": {
             const timeoutMs = request.timeout || 30000;
+
             if (_pendingDownloadWaiter) {
                 clearTimeout(_pendingDownloadWaiter.timer);
-                _pendingDownloadWaiter.resolve({ success: false, reason: "replaced" });
+                _pendingDownloadWaiter.resolve({
+                    success: false,
+                    reason: "replaced"
+                });
             }
+
             const timer = setTimeout(() => {
                 if (_pendingDownloadWaiter) {
-                    _removeBlockingListener();
                     _pendingDownloadWaiter = null;
-                    sendResponse({ success: false, reason: "timeout" });
+                    sendResponse({
+                        success: false,
+                        reason: "timeout"
+                    });
                 }
             }, timeoutMs);
-            _pendingDownloadWaiter = { resolve: sendResponse, timer };
-            // 优先用 webRequest blocking 拦截（阻断网页发起的下载，不触发多文件弹窗）
-            _addBlockingListener((url, filename) => {
-                if (_pendingDownloadWaiter) {
-                    clearTimeout(_pendingDownloadWaiter.timer);
-                    _pendingDownloadWaiter = null;
-                    sendResponse({ success: true, url, filename });
-                }
-            });
+
+            _pendingDownloadWaiter = {
+                resolve: sendResponse,
+                timer
+            };
+
             return true;
         }
 
@@ -180,10 +206,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
 
         case "cancelDownloadWait":
-            _removeBlockingListener();
             if (_pendingDownloadWaiter) {
                 clearTimeout(_pendingDownloadWaiter.timer);
-                _pendingDownloadWaiter.resolve({ success: false, reason: "cancelled" });
+                _pendingDownloadWaiter.resolve({
+                    success: false,
+                    reason: "cancelled"
+                });
                 _pendingDownloadWaiter = null;
             }
             sendResponse({ ok: true });
@@ -223,7 +251,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         path:  c.path,
                         secure:   c.secure,
                         httpOnly: c.httpOnly,
-                        sameSite: c.sameSite || 'unspecified'
+                        // Firefox 不接受 'unspecified'，映射为 'no_restriction'
+                        sameSite: (c.sameSite === 'unspecified' || !c.sameSite) ? 'no_restriction' : c.sameSite
                     };
                     if (c.domain.startsWith('.')) details.domain = c.domain;
                     if (c.expirationDate)        details.expirationDate = c.expirationDate;
@@ -239,22 +268,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // use-after-free bug（SIGSEGV at 0x37 / KERN_INVALID_ADDRESS）。
                 // 大量数据类型同时清除时（尤其 cacheStorage/fileSystems/serviceWorkers）
                 // Chrome 内部清理回调会访问已释放内存，导致主进程崩溃。
+                // Firefox browsingData API 不支持 localStorage / indexedDB
+                // 改用 content script 手动清除（见 clearBrowsingData handler 末尾）
                 chrome.browsingData.remove(
                     { since: 0 },
                     {
-                        cookies:       true,   // 退出登录必须
-                        localStorage:  true,   // HeyGen 存 auth 数据
-                        indexedDB:     true,   // 可能存 token
-                        downloads:     true,   // 下载历史（纯数据库，安全）
+                        cookies:   true,   // 退出登录必须
+                        downloads: true,   // 下载历史
+                        indexedDB: true,   // 可能存 token
                     },
                     () => {
                         if (chrome.runtime.lastError) {
                             sendResponse({ success: false, error: chrome.runtime.lastError.message });
                             return;
                         }
-                        // 清除扩展存储中的字幕预设记录（保留 autoCaptionEnabled 开关状态）
+                        // 清除扩展存储中的字幕预设
                         chrome.storage.local.remove(['captionPreset']);
-                        // 4. 恢复 Surfshark Cookie
+                        // 4. 手动清除所有标签页的 localStorage / sessionStorage
+                        //    （Firefox browsingData 不支持这两项）
+                        chrome.tabs.query({}, (tabs) => {
+                            for (const tab of (tabs || [])) {
+                                try {
+                                    chrome.scripting.executeScript({
+                                        target: { tabId: tab.id },
+                                        func: () => {
+                                            try { localStorage.clear(); } catch(_) {}
+                                            try { sessionStorage.clear(); } catch(_) {}
+                                        }
+                                    });
+                                } catch(_) {}
+                            }
+                        });
+                        // 5. 恢复 Surfshark Cookie
                         restoreCookies(vpnCookies).then(restored => {
                             sendResponse({ success: true, restored, total: vpnCookies.length });
                         });

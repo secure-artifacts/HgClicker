@@ -7,16 +7,9 @@ https://app.heygen.com/create-v4/draft
 
 class proc04Caption {
 
-    // 记录每个 URL 的尝试次数：成功则设为 Infinity，失败则累加，超过 MAX_RETRIES 停止
-    static _MAX_RETRIES = 3;
-    static _applyAttempts = new Map(); // url → 次数
-    static _isApplying   = false;      // 内部锁，防止多入口并发
     static _lastClickedCaptionId = null; // 点击拦截：记录用户最后点击的字幕样式卡片 id
 
-    // ── storage 缓存：避免每次触发都发 IPC 到主进程 ──
-    // 稳定优先：初始化一次 + onChanged 同步更新，常态下零 IPC
     static _cacheReady       = false;
-    static _cachedEnabled    = false;
     static _cachedPreset     = null;
     static _cacheInitPromise = null;
 
@@ -25,19 +18,13 @@ class proc04Caption {
         if (proc04Caption._cacheInitPromise) return proc04Caption._cacheInitPromise;
         proc04Caption._cacheInitPromise = new Promise((resolve) => {
             try {
-                chrome.storage.local.get(['autoCaptionEnabled', 'captionPreset'], (r) => {
-                    proc04Caption._cachedEnabled = (r && r.autoCaptionEnabled === true);
-                    proc04Caption._cachedPreset  = (r && r.captionPreset) || null;
-                    proc04Caption._cacheReady    = true;
+                chrome.storage.sync.get(['captionPreset'], (r) => {
+                    proc04Caption._cachedPreset = (r && r.captionPreset) || null;
+                    proc04Caption._cacheReady   = true;
 
-                    // 监听 storage 变化，保持缓存同步（只注册一次）
                     try {
                         chrome.storage.onChanged.addListener((changes, area) => {
-                            if (area !== 'local') return;
-                            if (changes.autoCaptionEnabled) {
-                                proc04Caption._cachedEnabled = changes.autoCaptionEnabled.newValue === true;
-                            }
-                            if (changes.captionPreset) {
+                            if (area === 'sync' && changes.captionPreset) {
                                 proc04Caption._cachedPreset = changes.captionPreset.newValue || null;
                             }
                         });
@@ -54,135 +41,61 @@ class proc04Caption {
     }
 
     /**
-     * 监听 Generate 按钮点击 → 在用户点击时保存当前字幕设置
-     * 无论用 Ctrl+B 还是直接点按钮都会触发
+     * 监听 Captions 按钮点击 → 用户打开面板时立即应用已保存的预设
      */
-    static _watchGenerateBtn() {
-        if (window.__heygenCaptionWatcher) return;
-        window.__heygenCaptionWatcher = true;
+    static _watchCaptionBtn() {
+        if (window.__heygenCaptionBtnWatcher) return;
+        window.__heygenCaptionBtnWatcher = true;
+
+        let _applying = false;
 
         const _tryAttach = () => {
-            // 已 hook 的按钮仍在 DOM 中 → 无需重扫
-            if (window.__heygenGenBtnHooked && window.__heygenGenBtnHooked.isConnected) return;
-            window.__heygenGenBtnHooked = null;
+            if (window.__heygenCaptionBtnHooked && window.__heygenCaptionBtnHooked.isConnected) return;
+            window.__heygenCaptionBtnHooked = null;
 
-            for (const btn of document.querySelectorAll('button')) {
-                if ((btn.textContent || '').trim() !== 'Generate') continue;
-                if (!btn.__captionSaveHooked) {
-                    btn.__captionSaveHooked = true;
-                    btn.addEventListener('click', () => {
-                        // 稍微延迟一下，确保 React 状态已同步
-                        setTimeout(() => proc04Caption.saveCurrentSettings(), 80);
-                    });
-                }
-                window.__heygenGenBtnHooked = btn; // 记录已 hook 的按钮
-                return; // Generate 按钮唯一，找到即可停止
-            }
-        };
+            const svg = document.querySelector('svg[name="cc-captions"]');
+            if (!svg) return;
+            const btn = svg.closest('button');
+            if (!btn || btn.__captionBtnHooked) return;
+            btn.__captionBtnHooked = true;
+            window.__heygenCaptionBtnHooked = btn;
 
-        // 立即尝试附加（按钮可能已在 DOM 中）
-        _tryAttach();
+            btn.addEventListener('click', async () => {
+                // 面板当前已开（class 含 !tw-bg-black/90）说明这次点击是关闭，跳过
+                const cls = btn.getAttribute('class') || '';
+                if (cls.includes('!tw-bg-black/90')) return;
+                if (_applying) return;
 
-        // 用 MutationObserver 监听按钮出现（防抖 800ms，减少 React 频繁渲染的影响）
-        let debounce = null;
-        const obs = new MutationObserver(() => {
-            clearTimeout(debounce);
-            debounce = setTimeout(_tryAttach, 2000);
-        });
-        obs.observe(document.body, { childList: true, subtree: true });
+                await proc04Caption._initCache();
+                const preset = proc04Caption._cachedPreset;
+                if (!preset) return;
 
-        // 页面离开时清理
-        window.addEventListener('pagehide', () => {
-            obs.disconnect();
-            window.__heygenCaptionWatcher = false;
-            window.__heygenGenBtnHooked = null;
-        }, { once: true });
-    }
-
-    /**
-     * 监听 Script 输入框：从空→有内容时触发自动字幕
-     * 比页面加载触发更可靠（此时页面必然已渲染完成）
-     */
-    static _watchScriptInput() {
-        if (window.__heygenScriptWatcher) return;
-        window.__heygenScriptWatcher = true;
-
-        const _tryAttach = () => {
-            try {
-            // 已 hook 的元素仍在 DOM 中 → 直接跳过所有扫描（最主要的 CPU 节省点）
-            if (window.__heygenScriptHookedEl && window.__heygenScriptHookedEl.isConnected) return;
-            window.__heygenScriptHookedEl = null;
-
-            // 查找 Script 输入区域（contenteditable 或 textarea）
-            // 策略1：data-placeholder / aria-placeholder 包含 "script" 或 "/"
-            let scriptEl = null;
-            for (const el of document.querySelectorAll('[data-placeholder],[aria-placeholder]')) {
+                _applying = true;
                 try {
-                    const ph = (el.getAttribute('data-placeholder') || el.getAttribute('aria-placeholder') || '').toLowerCase();
-                    if (ph.includes('script') || ph.includes('/')) { scriptEl = el; break; }
-                } catch (_) {}
-            }
-            // 策略2：找 "Script" 标题（用具体标签限定，避免遍历全部元素）
-            if (!scriptEl) {
-                const candidates = document.querySelectorAll('span, label, h1, h2, h3, h4, h5, p');
-                for (const heading of candidates) {
-                    try {
-                        if (heading.children.length > 0) continue;
-                        if ((heading.textContent || '').trim() !== 'Script') continue;
-                        let parent = heading.parentElement;
-                        for (let i = 0; i < 5; i++) {
-                            if (!parent) break;
-                            const editable = parent.querySelector('[contenteditable="true"]');
-                            if (editable) { scriptEl = editable; break; }
-                            parent = parent.parentElement;
-                        }
-                        if (scriptEl) break;
-                    } catch (_) {}
-                }
-            }
-            // 策略3：页面上第一个 contenteditable（兜底）
-            if (!scriptEl) {
-                scriptEl = document.querySelector('[contenteditable="true"]');
-            }
-
-            if (!scriptEl || scriptEl.__scriptWatchHooked) return;
-            scriptEl.__scriptWatchHooked = true;
-            window.__heygenScriptHookedEl = scriptEl; // 记录，供后续调用短路判断
-
-            let _hadContent = !!(scriptEl.textContent || scriptEl.value || '').trim();
-
-            scriptEl.addEventListener('input', async () => {
-                const hasContent = !!(scriptEl.textContent || scriptEl.value || '').trim();
-                if (!_hadContent && hasContent) {
-                    // 脚本刚从空变为有内容
-                    _hadContent = true;
-                    const url = window.location.href;
-                    const attempts = proc04Caption._applyAttempts.get(url) || 0;
-                    if (attempts !== Infinity) {
-                        // 允许重新尝试（重置计数），等待一小段让用户继续输入
-                        proc04Caption._applyAttempts.delete(url);
-                        await myUtil.sleep(800);
-                        await proc04Caption.autoApply();
-                    }
-                } else if (!hasContent) {
-                    _hadContent = false;
+                    await myUtil.sleep(300);
+                    await proc04Caption._applySettings(preset);
+                    myElementA._showQuickToast('✅ 字幕已自动设置', 2500);
+                } catch (e) {
+                    console.error('[proc04Caption._watchCaptionBtn]', e);
+                } finally {
+                    _applying = false;
                 }
             });
-            } catch (_) {} // _tryAttach 整体保护：防止 DOM 访问异常冒泡
         };
 
         _tryAttach();
-        let debounce = null;
+
+        let _debounce = null;
         const obs = new MutationObserver(() => {
-            clearTimeout(debounce);
-            debounce = setTimeout(_tryAttach, 2000); // 800ms 防抖，减少 React 频繁渲染的影响
+            clearTimeout(_debounce);
+            _debounce = setTimeout(_tryAttach, 2000);
         });
         obs.observe(document.body, { childList: true, subtree: true });
 
         window.addEventListener('pagehide', () => {
             obs.disconnect();
-            window.__heygenScriptWatcher = false;
-            window.__heygenScriptHookedEl = null;
+            window.__heygenCaptionBtnWatcher = false;
+            window.__heygenCaptionBtnHooked = null;
         }, { once: true });
     }
 
@@ -203,60 +116,13 @@ class proc04Caption {
     }
 
     /**
-     * 自动应用字幕设置（由 MutationObserver 或 Script 输入触发）
-     * 检查 storage 中是否有保存的预设，如有则应用，如无则跳过
+     * 在编辑器页面初始化监听器（由 content.js MutationObserver 触发一次）
      */
-    static async autoApply() {
-        // 内部并发锁：防止多个入口（页面加载 / Script 输入）同时执行
-        if (proc04Caption._isApplying) return { status: true, msg: '正在处理中' };
-        proc04Caption._isApplying = true;
-        try {
-            const url = window.location.href;
-
-            // 0. 先做最廉价的守卫：URL 不匹配则立即返回，不做任何 IPC / 注册
-            if (!url.includes('/create-v4/')) return { status: true, msg: '不是编辑器页面' };
-
-            // 同一个视频：已成功 或 已达最大重试次数 则直接返回（避免后续 IPC / 监听器注册）
-            const _attempts = proc04Caption._applyAttempts.get(url) || 0;
-            if (_attempts === Infinity) return { status: true, msg: '已应用过' };
-            if (_attempts >= proc04Caption._MAX_RETRIES) return { status: true, msg: '已达最大重试次数' };
-
-            // 初始化 storage 缓存（只在首次发一次 IPC，之后常态 0 IPC）
-            await proc04Caption._initCache();
-
-            // 无论是否有预设，都监听 Generate 按钮、Script 输入、字幕卡片点击（内部有 window 级守卫，只注册一次）
-            proc04Caption._watchGenerateBtn();
-            proc04Caption._watchScriptInput();
-            proc04Caption._watchCaptionCards();
-
-            // 1. 检查开关（缓存读取）
-            if (!proc04Caption._cachedEnabled) return { status: true, msg: '自动字幕已关闭' };
-
-            // 2. 读取保存的预设（缓存读取）；无预设则跳过（用户尚未设置过样式）
-            const preset = proc04Caption._cachedPreset;
-            if (!preset) return { status: true, msg: '无字幕预设，跳过' };
-
-            // 3. 等待编辑器完整渲染
-            await myUtil.sleep(2800 + Math.random() * 1600);
-
-            // 4. 记录本次尝试（先累加，失败时不会再被覆盖为 Infinity）
-            proc04Caption._applyAttempts.set(url, _attempts + 1);
-
-            // 5. 应用设置
-            await proc04Caption._applySettings(preset);
-
-            // 6. 成功：标记为 Infinity，不再重试
-            proc04Caption._applyAttempts.set(url, Infinity);
-
-            myElementA._showQuickToast('✅ 字幕已自动设置', 2500);
-            return { status: true, msg: '字幕已自动设置' };
-
-        } catch (error) {
-            console.error('[proc04Caption.autoApply]', error);
-            return { status: false, msg: error.message };
-        } finally {
-            proc04Caption._isApplying = false;
-        }
+    static init() {
+        if (!window.location.href.includes('/create-v4/')) return { status: true, msg: '不是编辑器页面' };
+        proc04Caption._watchCaptionBtn();
+        proc04Caption._watchCaptionCards();
+        return { status: true, msg: '任务已完成' };
     }
 
     /**
@@ -266,7 +132,7 @@ class proc04Caption {
     static async start() {
         const preset = await new Promise((resolve) => {
             try {
-                chrome.storage.local.get(['captionPreset'], (r) => {
+                chrome.storage.sync.get(['captionPreset'], (r) => {
                     resolve(r.captionPreset || null);
                 });
             } catch (_) { resolve(null); }
@@ -415,7 +281,7 @@ class proc04Caption {
     }
 
     /**
-     * 保存当前字幕设置到 chrome.storage.local
+     * 保存当前字幕设置到 chrome.storage.sync（清理浏览器数据不丢失）
      * 在用户点击 Generate 前调用
      */
     static async saveCurrentSettings() {
@@ -605,7 +471,7 @@ class proc04Caption {
                 if (fontSize) preset.fontSize = fontSize;
 
                 await new Promise((resolve) => {
-                    chrome.storage.local.set({ captionPreset: preset }, resolve);
+                    chrome.storage.sync.set({ captionPreset: preset }, resolve);
                 });
                 console.log('[proc04Caption] 已保存字幕预设:', preset);
             }

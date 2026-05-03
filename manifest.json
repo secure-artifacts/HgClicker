@@ -4,6 +4,7 @@
     "version": "2.2.0",
     "author": "James",
     "description": "HeyGen 辅助工具 自动点击",
+
     "icons": {
         "16": "icon16.png",
         "32": "icon32.png",
@@ -19,6 +20,7 @@
         },
         "default_title": "HeyGen Helper"
     },
+
     "permissions": [
         "tabs",
         "activeTab",
@@ -27,9 +29,9 @@
         "downloads",
         "browsingData",
         "cookies",
-        "webRequest",
-        "webRequestBlocking"
+        "webRequest"
     ],
+
     "content_scripts": [
         {
             "matches": [
@@ -40,8 +42,6 @@
                 "js/myXPath.js",
                 "js/mySimulate.js",
                 "js/myElementA.js",
-                "js/myEffect.js",
-                "js/myStorage.js",
                 "js/proc01Questionnaire.js",
                 "js/proc02UpdateImage.js",
                 "js/proc03Walkthrough.js",
@@ -51,6 +51,7 @@
                 "js/proc07Popover.js",
                 "js/proc08BatchDownload.js",
                 "js/proc09AutoRedirect.js",
+                "js/proc10AvatarClick.js",
                 "content.js"
             ],
             "css": [
@@ -60,13 +61,15 @@
             "run_at": "document_end"
         }
     ],
+
     "host_permissions": [
         "<all_urls>"
     ],
+
     "web_accessible_resources": [
         {
             "matches": [
-                "<all_urls>"
+                "https://app.heygen.com/*"
             ],
             "resources": [
                 "js/*.js",
@@ -78,6 +81,7 @@
             ]
         }
     ],
+
     "commands": {
         "generate-video": {
             "suggested_key": {
@@ -87,10 +91,12 @@
             "description": "Generate video"
         }
     },
+
     "background": {
         "service_worker": "background.js"
     },
+
     "content_security_policy": {
-        "extension_pages": "script-src 'self'; object-src 'self' "
+        "extension_pages": "script-src 'self'; object-src 'self'"
     }
 }

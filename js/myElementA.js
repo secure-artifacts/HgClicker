@@ -36,11 +36,6 @@ class myElementA {
      * 控件显示或隐藏
      */
     static async toggleVisibility() {
-        //  const self = this;
-
-        // btn-outline-warning
-        // btn-outline-success
-
         try {
             const container = document.querySelector('#container0211A');
             const button = document.querySelector('#container0211A #btnSwitcher');
@@ -50,10 +45,6 @@ class myElementA {
 
             let _icon = `<img src="${chrome.runtime.getURL('icon128.png')}">`;
 
-            // ── 自动收起计时器 ──
-            let _autoHideTimer = null;
-            const AUTO_HIDE_DELAY = 3000; // 3 秒
-
             const _collapse = () => {
                 button.setAttribute('state', 'hidden');
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
@@ -62,59 +53,20 @@ class myElementA {
                 container.classList.add('body-hidden');
             };
 
-            const _startAutoHide = () => {
-                _clearAutoHide();
-                _autoHideTimer = setTimeout(() => {
-                    if ((button.getAttribute('state') || 'hidden') === 'visible') {
-                        _collapse();
-                    }
-                }, AUTO_HIDE_DELAY);
-            };
-
-            const _clearAutoHide = () => {
-                if (_autoHideTimer !== null) {
-                    clearTimeout(_autoHideTimer);
-                    _autoHideTimer = null;
-                }
-            };
-
-            // 鼠标进入面板 → 取消计时
-            container.addEventListener('mouseenter', () => {
-                _clearAutoHide();
-            });
-
-            // 鼠标离开面板 → 开始倒计时
-            container.addEventListener('mouseleave', () => {
-                if ((button.getAttribute('state') || 'hidden') === 'visible') {
-                    _startAutoHide();
-                }
-            });
-
-            // ── 展开面板 ──
             const _expand = () => {
                 button.setAttribute('state', 'visible');
                 button.innerHTML = `${_icon}`;
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
                 button.classList.add('btn-success');
                 container.classList.remove('body-hidden');
-                _startAutoHide();
             };
-
-            // 鼠标悬停在图标上 → 立即展开
-            button.addEventListener('mouseenter', () => {
-                if ((button.getAttribute('state') || 'hidden') === 'hidden') {
-                    _clearAutoHide();
-                    _expand();
-                }
-            });
 
             // 点击图标 → 切换展开/收起
             button.addEventListener('click', (event) => {
+                if (event._fromDrag) return;
                 button.classList.remove('btn-success', 'btn-warning', 'btn-info');
-
                 let state = button.getAttribute('state') || 'hidden';
                 if (state === 'visible') {
-                    _clearAutoHide();
                     _collapse();
                 } else {
                     _expand();
@@ -124,6 +76,49 @@ class myElementA {
         } catch (error) {
             throw new Error(`Error-myelement-0001: ${error.message}`);
         }
+    }
+
+    static _initDrag(container) {
+        const THRESHOLD = 5;
+        let startX, startY, startLeft, startTop, didDrag;
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            if (e.target.closest('button, input, label, a')) return;
+
+            const rect = container.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = rect.left;
+            startTop = rect.top;
+            didDrag = false;
+
+            const onMove = (e) => {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (!didDrag && Math.abs(dx) < THRESHOLD && Math.abs(dy) < THRESHOLD) return;
+                didDrag = true;
+                container.style.cursor = 'grabbing';
+                let newLeft = Math.max(0, Math.min(window.innerWidth - container.offsetWidth, startLeft + dx));
+                let newTop  = Math.max(0, Math.min(window.innerHeight - container.offsetHeight, startTop + dy));
+                container.style.left  = newLeft + 'px';
+                container.style.top   = newTop + 'px';
+                container.style.right = 'auto';
+            };
+
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                container.style.cursor = '';
+                if (didDrag) {
+                    const r = container.getBoundingClientRect();
+                    chrome.storage.local.set({ panelPosition: { left: r.left, top: r.top } });
+                }
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
     }
 
     /**
@@ -161,17 +156,11 @@ class myElementA {
                     <button name="btnCopyEmail" data-tooltip="复制邮箱"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg></button>
                     <button name="btnNewAvatar" data-tooltip="上传头像"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
                     <button name="btnCaption" data-tooltip="字幕设置"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M7 15h4M15 15h2M7 11h2M13 11h4"/></svg></button>
-                    <button id="btnSwitcher" state="hidden">${_icon}</button>
+                    <button id="btnSwitcher" state="visible">${_icon}</button>
                     <button name="btnSettings" id="btnSettings">⚙</button>
                 </div>
                 <div name="settingsPanel" class="hg-settings-panel">
                     <div class="hg-sp-section-title">字幕</div>
-                    <div class="hg-caption-row">
-                        <label class="hg-caption-auto">
-                            <input type="checkbox" name="chkAutoCaption">
-                            <span>自动</span>
-                        </label>
-                    </div>
                     <div class="hg-caption-row">
                         <button name="btnSaveCaption" class="hg-sp-btn">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -190,6 +179,32 @@ class myElementA {
                         <input type="checkbox" name="chkAutoRedirect">
                         <span>自动跳转</span>
                     </label>
+                    <div class="hg-redirect-delay-row">
+                        <span class="hg-redirect-delay-label">跳转延迟</span>
+                        <input type="number" name="redirectDelay" min="1" max="30" step="1" value="5" class="hg-redirect-delay-input">
+                        <span class="hg-redirect-delay-unit">秒</span>
+                    </div>
+                    <label class="hg-toggle-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+                        <input type="checkbox" name="chkAvatarClick">
+                        <span>自动点击 Look</span>
+                    </label>
+                    <div class="hg-avatar-click-row">
+                        <span name="avatarClickProgress">进度：第 1 个</span>
+                        <button name="btnResetAvatarClick" class="hg-sp-btn hg-sp-btn-sm">重置</button>
+                    </div>
+                    <div class="hg-sp-divider"></div>
+                    <div class="hg-sp-section-title">头像表单</div>
+                    <label class="hg-toggle-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <input type="radio" name="avatarFormMode" value="randomName">
+                        <span>随机人名 + 自动属性</span>
+                    </label>
+                    <label class="hg-toggle-label">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+                        <input type="radio" name="avatarFormMode" value="fixedAttr">
+                        <span>跳过人名，填写属性</span>
+                    </label>
                 </div>
                 `;
 
@@ -198,9 +213,20 @@ class myElementA {
                 element = document.createElement('div');
                 element.id = 'container0211A';
                 element.classList.add('container-0211');
-                element.classList.add('body-hidden');
                 element.innerHTML = html;
                 document.body.appendChild(element);
+
+                chrome.storage.local.get(['panelPosition'], (result) => {
+                    if (result.panelPosition) {
+                        const maxLeft = window.innerWidth  - element.offsetWidth;
+                        const maxTop  = window.innerHeight - element.offsetHeight;
+                        element.style.left  = Math.max(0, Math.min(maxLeft, result.panelPosition.left)) + 'px';
+                        element.style.top   = Math.max(0, Math.min(maxTop,  result.panelPosition.top))  + 'px';
+                        element.style.right = 'auto';
+                    }
+                });
+
+                myElementA._initDrag(element);
             }
         } catch (error) {
             throw new Error(`Error-myelement-0002: ${error.message}`);
@@ -535,11 +561,28 @@ class myElementA {
                 const btn   = document.querySelector('#container0211A button[name="btnSettings"]');
                 const panel = document.querySelector('#container0211A div[name="settingsPanel"]');
                 if (btn && panel) {
+                    let autoCloseTimer = null;
+
+                    const closePanel = () => {
+                        panel.classList.remove('open');
+                        btn.classList.remove('selected');
+                        btn.textContent = '⚙ 设置';
+                    };
+
                     btn.addEventListener('click', () => {
                         const isOpen = panel.classList.contains('open');
+                        clearTimeout(autoCloseTimer);
                         panel.classList.toggle('open', !isOpen);
                         btn.classList.toggle('selected', !isOpen);
                         btn.textContent = isOpen ? '⚙ 设置' : '⚙ 设置 ▴';
+                    });
+
+                    panel.addEventListener('mouseleave', () => {
+                        autoCloseTimer = setTimeout(closePanel, 2000);
+                    });
+
+                    panel.addEventListener('mouseenter', () => {
+                        clearTimeout(autoCloseTimer);
                     });
                 }
             }
@@ -668,19 +711,6 @@ class myElementA {
                 }
             }
 
-            // 自动字幕开关
-            if (1) {
-                const checkbox = document.querySelector('#container0211A input[name="chkAutoCaption"]');
-                if (checkbox) {
-                    chrome.storage.local.get(['autoCaptionEnabled'], (result) => {
-                        checkbox.checked = result.autoCaptionEnabled === true;
-                    });
-                    checkbox.addEventListener('change', (event) => {
-                        chrome.storage.local.set({ autoCaptionEnabled: event.target.checked });
-                    });
-                }
-            }
-
             // 保存当前字幕样式按钮
             if (1) {
                 const btn = document.querySelector('#container0211A button[name="btnSaveCaption"]');
@@ -693,7 +723,7 @@ class myElementA {
                         btn.disabled = true;
                         try {
                             await proc04Caption.saveCurrentSettings();
-                            chrome.storage.local.get(['captionPreset'], (r) => {
+                            chrome.storage.sync.get(['captionPreset'], (r) => {
                                 if (r && r.captionPreset && Object.keys(r.captionPreset).length > 0) {
                                     myElementA._showQuickToast('✅ 字幕样式已保存', 2500);
                                 } else {
@@ -722,6 +752,50 @@ class myElementA {
                 }
             }
 
+            // 跳转延迟秒数
+            if (1) {
+                const delayInput = document.querySelector('#container0211A input[name="redirectDelay"]');
+                if (delayInput) {
+                    chrome.storage.local.get(['autoRedirectDelay'], (result) => {
+                        delayInput.value = result.autoRedirectDelay ?? 5;
+                    });
+                    delayInput.addEventListener('change', (event) => {
+                        const val = Math.max(1, Math.min(30, parseInt(event.target.value, 10) || 5));
+                        event.target.value = val;
+                        chrome.storage.local.set({ autoRedirectDelay: val });
+                    });
+                }
+            }
+
+            // 自动点击 Look 开关 + 进度重置
+            if (1) {
+                const chk = document.querySelector('#container0211A input[name="chkAvatarClick"]');
+                if (chk) {
+                    chrome.storage.local.get(['avatarClickEnabled'], (result) => {
+                        chk.checked = result.avatarClickEnabled === true;
+                    });
+                    chk.addEventListener('change', (e) => {
+                        chrome.storage.local.set({ avatarClickEnabled: e.target.checked });
+                    });
+                }
+
+                const progressEl = document.querySelector('#container0211A [name="avatarClickProgress"]');
+                const refreshProgress = () => {
+                    if (!progressEl) return;
+                    chrome.storage.local.get(['avatarClickIndex'], (r) => {
+                        progressEl.textContent = `进度：第 ${((r.avatarClickIndex ?? 0)) + 1} 个`;
+                    });
+                };
+                refreshProgress();
+
+                const btnReset = document.querySelector('#container0211A button[name="btnResetAvatarClick"]');
+                if (btnReset) {
+                    btnReset.addEventListener('click', () => {
+                        chrome.storage.local.set({ avatarClickIndex: 0 }, refreshProgress);
+                    });
+                }
+            }
+
             // 自动填充人名开关
             if (1) {
                 const checkbox = document.querySelector('#container0211A input[name="chkAutoFillName"]');
@@ -731,6 +805,24 @@ class myElementA {
                     });
                     checkbox.addEventListener('change', (event) => {
                         chrome.storage.local.set({ autoFillNameEnabled: event.target.checked });
+                    });
+                }
+            }
+
+            // 头像表单模式
+            if (1) {
+                const radios = document.querySelectorAll('#container0211A input[name="avatarFormMode"]');
+                if (radios.length) {
+                    chrome.storage.local.get(['avatarFormMode'], (result) => {
+                        const mode = result.avatarFormMode || 'randomName';
+                        radios.forEach(r => { r.checked = r.value === mode; });
+                    });
+                    radios.forEach(r => {
+                        r.addEventListener('change', (e) => {
+                            if (e.target.checked) {
+                                chrome.storage.local.set({ avatarFormMode: e.target.value });
+                            }
+                        });
                     });
                 }
             }

@@ -36,8 +36,17 @@ class proc09AutoRedirect {
             console.log(`[proc09] Projects 页面视频数量: ${count}`);
 
             if (count < 3) {
-                console.log(`[proc09] 视频数 ${count} < 3，倒计时后跳转到 Avatar 页面`);
-                const shouldRedirect = await proc09AutoRedirect.countdownRedirect(5);
+                const delay = await new Promise((resolve) => {
+                    try {
+                        chrome.storage.local.get(['autoRedirectDelay'], (result) => {
+                            resolve(result.autoRedirectDelay ?? 5);
+                        });
+                    } catch (_) {
+                        resolve(5);
+                    }
+                });
+                console.log(`[proc09] 视频数 ${count} < 3，${delay} 秒后跳转到 Avatar 页面`);
+                const shouldRedirect = await proc09AutoRedirect.countdownRedirect(delay);
                 if (shouldRedirect) {
                     window.location.href = 'https://app.heygen.com/avatar/my-avatars';
                 }
