@@ -81,12 +81,20 @@
             done: false,
         },
         {
-            name: 'proc04Caption',
-            textKey: null,              // 不用文字匹配，改用 URL 匹配
-            urlKey: '/create-v4/',      // 视频编辑器页面
-            fn: () => proc04Caption.autoApply(),
+            name: 'proc10',
+            textKey: null,
+            urlKey: '/avatar/my-avatars',
+            fn: () => proc10AvatarClick.start(),
             isProcessing: false,
-            done: false,   // 永不标记为 done，以便切换视频后再次触发
+            done: false,
+        },
+        {
+            name: 'proc04Caption',
+            textKey: null,
+            urlKey: '/create-v4/',
+            fn: () => proc04Caption.init(),
+            isProcessing: false,
+            done: false,
         },
         // {
         //     name: 'proc07',

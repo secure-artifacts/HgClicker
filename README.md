@@ -2,7 +2,7 @@
 
 HeyGen 辅助浏览器插件，自动处理 [app.heygen.com](https://app.heygen.com) 上的重复性操作，提升视频批量生产效率。
 
-**当前版本：2.3.0**
+**当前版本：2.3.1**
 
 ---
 
@@ -88,6 +88,17 @@ background.js        Service Worker（后台任务）
 ---
 
 ## 更新日志
+
+### v2.3.1
+
+**Firefox 批量下载修复**
+
+- **修复 blob: URL 无法下载**：Firefox 不支持直接下载 `blob:` URL，改为 `fetch` 后 `createObjectURL` 再触发下载
+- **串行下载 + 5 秒间隔**：移除并发控制逻辑（MAX_CONCURRENT / _adjust），改为单线程串行队列，每次下载间隔 5000ms，防止触发 CDN 限速或 Firefox 风控
+- **移除 cancel 操作**：`onCreated` 监听器不再 cancel 下载，避免被 Firefox 判定为异常行为
+- **超时延长至 30s**：原 20s 超时在 Firefox 串行场景下偶发超时，调整为 30s
+
+---
 
 ### v2.3.0
 

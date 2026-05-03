@@ -16,7 +16,7 @@ async function _setActionIcon() {
             cv.getContext('2d').drawImage(bmp, 0, 0, s, s);
             imageData[s] = cv.getContext('2d').getImageData(0, 0, s, s);
         }
-        await chrome.action.setIcon({ imageData });
+        await chrome.browserAction.setIcon({ imageData });
         console.log('[HeyGen Helper] 图标设置成功');
     } catch (e) {
         console.warn('[HeyGen Helper] setIcon 失败:', e.message);
@@ -49,82 +49,94 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
 });
 
-// ── 批量下载：拦截网页下载，由扩展重新发起（规避多文件弹窗）──
+// ── 批量下载：稳定版（Firefox / Chrome 通用）──
+
+// 当前等待中的下载捕获
 let _pendingDownloadWaiter = null;
 
-// ── webRequest blocking 拦截器：在浏览器创建下载项之前拦截，防止「多文件下载」弹窗 ──
-let _blockingListener = null;
-
-function _removeBlockingListener() {
-    if (_blockingListener) {
-        try { chrome.webRequest.onBeforeRequest.removeListener(_blockingListener); } catch (_) {}
-        _blockingListener = null;
-    }
-}
-
-function _addBlockingListener(onCapture) {
-    _removeBlockingListener();
-    _blockingListener = function(details) {
-        if (!_pendingDownloadWaiter) { _removeBlockingListener(); return {}; }
-        const url = details.url;
-        const isVideo = url.includes('.mp4') || url.includes('heygen') ||
-                        url.includes('video') || /\.(mov|webm|mkv|avi)(\?|$)/i.test(url);
-        const fromHeygen = !details.originUrl || details.originUrl.includes('heygen.com');
-        if (!isVideo || !fromHeygen) return {};
-        _removeBlockingListener();
-        try {
-            const p = new URL(url).pathname.split('/');
-            const filename = p[p.length - 1] || '';
-            onCapture(url, filename);
-        } catch (_) { onCapture(url, ''); }
-        return { cancel: true };
-    };
-    try {
-        chrome.webRequest.onBeforeRequest.addListener(
-            _blockingListener,
-            { urls: ['<all_urls>'] },
-            ['blocking']
-        );
-    } catch (_) {
-        // Firefox MV3 若不支持 blocking，静默回退到 onCreated 路径
-        _blockingListener = null;
-    }
-}
-
-// ── 全局下载队列：跨容器串行，防止多账号并发触发 CDN 限速 ──
+// ── 全局下载队列（串行，防限速）──
 const _downloadQueue = [];
-let   _downloadBusy  = false;
-const _DOWNLOAD_INTERVAL_MS = 3000; // 两次下载之间的最小间隔（毫秒）
+let _downloadBusy = false;
+// Firefox 限速更严格，间隔设为 5000ms
+const _DOWNLOAD_INTERVAL_MS = 5000;
 
-function _processDownloadQueue() {
+// ── URL 规范化（解决 Firefox blob 无法下载问题）──
+async function _normalizeUrl(url) {
+    if (!url) return url;
+
+    // Firefox 对 blob: 不能直接下载
+    if (url.startsWith("blob:")) {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return URL.createObjectURL(blob);
+        } catch (e) {
+            console.warn("blob 转换失败:", e);
+            return url;
+        }
+    }
+
+    return url;
+}
+
+// ── 下载队列处理（串行执行）──
+async function _processDownloadQueue() {
     if (_downloadBusy || _downloadQueue.length === 0) return;
+
     _downloadBusy = true;
 
     const { url, filename, resolve } = _downloadQueue.shift();
-    chrome.downloads.download(
-        { url, filename: filename || undefined, conflictAction: 'uniquify' },
-        (downloadId) => {
-            if (chrome.runtime.lastError) {
-                resolve({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-                resolve({ success: true, downloadId });
+
+    try {
+        const finalUrl = await _normalizeUrl(url);
+
+        chrome.downloads.download(
+            {
+                url: finalUrl,
+                filename: filename || undefined,
+                conflictAction: "uniquify",
+                saveAs: false
+            },
+            (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    resolve({
+                        success: false,
+                        error: chrome.runtime.lastError.message
+                    });
+                } else {
+                    resolve({
+                        success: true,
+                        downloadId
+                    });
+                }
+
+                setTimeout(() => {
+                    _downloadBusy = false;
+                    _processDownloadQueue();
+                }, _DOWNLOAD_INTERVAL_MS);
             }
-            // 等待间隔后再处理下一个
-            setTimeout(() => {
-                _downloadBusy = false;
-                _processDownloadQueue();
-            }, _DOWNLOAD_INTERVAL_MS);
-        }
-    );
+        );
+    } catch (err) {
+        resolve({
+            success: false,
+            error: err.message
+        });
+
+        _downloadBusy = false;
+        _processDownloadQueue();
+    }
 }
 
+// ── 监听下载创建（⚠️ 不再 cancel，避免 Firefox 风控）──
 chrome.downloads.onCreated.addListener((item) => {
     if (!_pendingDownloadWaiter) return;
 
     const url = item.url || "";
+
     const isTarget =
-        url.includes("heygen") || url.includes(".mp4") ||
-        url.includes("blob:") || url.includes("video") ||
+        url.includes("heygen") ||
+        url.includes(".mp4") ||
+        url.includes("video") ||
         item.mime === "video/mp4" ||
         (item.filename || "").endsWith(".mp4");
 
@@ -132,10 +144,14 @@ chrome.downloads.onCreated.addListener((item) => {
 
     const { resolve, timer } = _pendingDownloadWaiter;
     _pendingDownloadWaiter = null;
+
     clearTimeout(timer);
 
-    chrome.downloads.cancel(item.id, () => {
-        resolve({ success: true, url: item.url, filename: item.filename || "" });
+    // ❗ 关键：不再 cancel
+    resolve({
+        success: true,
+        url: item.url,
+        filename: item.filename || ""
     });
 });
 
@@ -157,26 +173,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case "interceptNextDownload": {
             const timeoutMs = request.timeout || 30000;
+
             if (_pendingDownloadWaiter) {
                 clearTimeout(_pendingDownloadWaiter.timer);
-                _pendingDownloadWaiter.resolve({ success: false, reason: "replaced" });
+                _pendingDownloadWaiter.resolve({
+                    success: false,
+                    reason: "replaced"
+                });
             }
+
             const timer = setTimeout(() => {
                 if (_pendingDownloadWaiter) {
-                    _removeBlockingListener();
                     _pendingDownloadWaiter = null;
-                    sendResponse({ success: false, reason: "timeout" });
+                    sendResponse({
+                        success: false,
+                        reason: "timeout"
+                    });
                 }
             }, timeoutMs);
-            _pendingDownloadWaiter = { resolve: sendResponse, timer };
-            // 优先用 webRequest blocking 拦截（Firefox MV3 支持时阻断请求，不触发多文件弹窗）
-            _addBlockingListener((url, filename) => {
-                if (_pendingDownloadWaiter) {
-                    clearTimeout(_pendingDownloadWaiter.timer);
-                    _pendingDownloadWaiter = null;
-                    sendResponse({ success: true, url, filename });
-                }
-            });
+
+            _pendingDownloadWaiter = {
+                resolve: sendResponse,
+                timer
+            };
+
             return true;
         }
 
@@ -187,10 +207,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
 
         case "cancelDownloadWait":
-            _removeBlockingListener();
             if (_pendingDownloadWaiter) {
                 clearTimeout(_pendingDownloadWaiter.timer);
-                _pendingDownloadWaiter.resolve({ success: false, reason: "cancelled" });
+                _pendingDownloadWaiter.resolve({
+                    success: false,
+                    reason: "cancelled"
+                });
                 _pendingDownloadWaiter = null;
             }
             sendResponse({ ok: true });
@@ -268,12 +290,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         chrome.tabs.query({}, (tabs) => {
                             for (const tab of (tabs || [])) {
                                 try {
-                                    chrome.scripting.executeScript({
-                                        target: { tabId: tab.id },
-                                        func: () => {
-                                            try { localStorage.clear(); } catch(_) {}
-                                            try { sessionStorage.clear(); } catch(_) {}
-                                        }
+                                    chrome.tabs.executeScript(tab.id, {
+                                        code: "try { localStorage.clear(); } catch(_) {} try { sessionStorage.clear(); } catch(_) {}"
                                     });
                                 } catch(_) {}
                             }

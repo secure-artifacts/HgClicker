@@ -1,4 +1,8 @@
-// proc08BatchDownload.js — HeyGen 批量下载 & 删除
+// proc08BatchDownload.js — HeyGen 批量下载 & 删除（Firefox 版）
+// Firefox 批量下载注意事项：
+//   1. 需在 Firefox 设置中开启"自动保存"（不弹 Save As 对话框）：
+//      about:preferences → 下载 → 勾选"自动保存文件到..."
+//   2. 下载间隔比 Chrome 版更长（5000ms），避免触发 HeyGen CDN 限速
 
 class proc08BatchDownload {
 
