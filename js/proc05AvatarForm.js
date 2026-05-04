@@ -24,13 +24,13 @@ class proc05AvatarForm {
 
             await myUtil.sleep(200 + Math.random() * 200);
 
-            await self.setAge();
-            await self.setGender();
-            await self.setEthnicity();
-
             if (mode === 'randomName') {
                 await self.setName();
                 await self.clickContinue();
+            } else {
+                await self.setAge();
+                await self.setGender();
+                await self.setEthnicity();
             }
             return { status: true, msg: `任务已完成` };
         } catch (error) {
@@ -46,7 +46,6 @@ class proc05AvatarForm {
             if (1) {
                 let element = await myXPath.getElement(`//div[contains(text(), "Age")]/following-sibling::button[@role="combobox" and @data-state="closed"]`);
                 if (element) {
-                    // return { status: false, msg: '找不到按钮1' };
                     element.click();
                 }
             }
@@ -56,7 +55,6 @@ class proc05AvatarForm {
             if (1) {
                 let btn = await myXPath.getElement(`//div[@role="presentation"]//div[./div/div[text()="Early Middle Age"]]`);
                 if (btn) {
-                    // return { status: false, msg: '找不到按钮2' };
                     btn.click();
                 }
             }
@@ -74,7 +72,6 @@ class proc05AvatarForm {
         try {
             let element = await myXPath.getElement(`//div[contains(text(), "Gender")]/following-sibling::button[@role="combobox" and @data-state="closed"]`);
             if (element) {
-                // return { status: false, msg: '找不到按钮3' };
                 element.click();
             }
 
@@ -83,7 +80,6 @@ class proc05AvatarForm {
             if (1) {
                 let btn = await myXPath.getElement(`//div[@role="presentation"]//div[./div/div[text()="Man"]]`);
                 if (btn) {
-                    // return { status: false, msg: '找不到按钮4' };
                     btn.click();
                 }
             }
@@ -101,7 +97,6 @@ class proc05AvatarForm {
         try {
             let element = await myXPath.getElement(`//div[contains(text(), "Ethnicity")]/following-sibling::button[@role="combobox" and @data-state="closed"]`);
             if (element) {
-                // return { status: false, msg: '找不到按钮5' };
                 element.click();
             }
 
@@ -110,7 +105,6 @@ class proc05AvatarForm {
             if (1) {
                 let btn = await myXPath.getElement(`//div[@role="presentation"]//div[./div/div[text()="White"]]`);
                 if (btn) {
-                    // return { status: false, msg: '找不到按钮6' };
                     btn.click();
                 }
             }
