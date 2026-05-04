@@ -197,7 +197,6 @@ class proc07Popover {
      * @returns 
      */
     static async pop04Introducing() {
-        const self = this;
 
         try {
             let _getElement = async () => {
@@ -207,7 +206,7 @@ class proc07Popover {
 
             let _getBtnClose = async () => {
                 let selector = `//div[@role="dialog"]//button[.//*[@name="close"]]`;
-                return await myXPath.getElement(selector, 5);
+                return await myXPath.getElement(selector, 1);
             }
 
             let element = await _getElement();
@@ -222,13 +221,32 @@ class proc07Popover {
                     return { status: false, msg: `已尝试了3次，任务执行失败` };
                 }
 
-                if (1) {
-                    let btn = await _getBtnClose();
-                    if (btn) {
-                        await mySimulate.cursorClick(btn);
+                // 方案1：点击关闭按钮（有时存在）
+                const btn = await _getBtnClose();
+                if (btn) {
+                    await mySimulate.cursorClick(btn);
+                    return { status: true, msg: `任务已完成` };
+                }
 
+                // 方案2：点击 Radix Dialog 遮罩层
+                const overlay = document.querySelector('[data-radix-dialog-overlay]') ||
+                                document.querySelector('[data-overlay]') ||
+                                document.querySelector('[class*="overlay"][class*="tw-fixed"]');
+                if (overlay) {
+                    await mySimulate.cursorClick(overlay);
+                    await myUtil.sleep(300);
+                    if (!document.body.textContent.includes('Introducing Brand Systems')) {
                         return { status: true, msg: `任务已完成` };
                     }
+                }
+
+                // 方案3：按 Escape 键
+                document.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: 'Escape', keyCode: 27, bubbles: true, cancelable: true
+                }));
+                await myUtil.sleep(300);
+                if (!document.body.textContent.includes('Introducing Brand Systems')) {
+                    return { status: true, msg: `任务已完成` };
                 }
 
                 loop++;

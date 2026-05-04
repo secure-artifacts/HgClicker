@@ -53,17 +53,17 @@ class proc04Caption {
             if (window.__heygenCaptionBtnHooked && window.__heygenCaptionBtnHooked.isConnected) return;
             window.__heygenCaptionBtnHooked = null;
 
-            const svg = document.querySelector('svg[name="cc-captions"]');
-            if (!svg) return;
-            const btn = svg.closest('button');
+            const btn = document.evaluate(
+                "//div[contains(@class,'tw-h-16') and .//span[text()='Captions']]",
+                document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+            ).singleNodeValue;
             if (!btn || btn.__captionBtnHooked) return;
             btn.__captionBtnHooked = true;
             window.__heygenCaptionBtnHooked = btn;
 
             btn.addEventListener('click', async () => {
-                // 面板当前已开（class 含 !tw-bg-black/90）说明这次点击是关闭，跳过
-                const cls = btn.getAttribute('class') || '';
-                if (cls.includes('!tw-bg-black/90')) return;
+                // 面板当前已开（[data-caption-id] 卡片存在）说明这次点击是关闭，跳过
+                if (document.querySelectorAll('[data-caption-id]').length > 0) return;
                 if (_applying) return;
 
                 await proc04Caption._initCache();
@@ -141,10 +141,9 @@ class proc04Caption {
         if (!preset) {
             // 无预设：仅打开字幕面板，不强制套用任何默认样式
             try {
-                let btnCaption = await myXPath.getElement(`//button[.//*[@name="cc-captions"]]`, 5);
+                let btnCaption = await myXPath.getElement(`//div[contains(@class,'tw-h-16') and .//span[text()='Captions']]`, 5);
                 if (btnCaption) {
-                    const cls = btnCaption.getAttribute('class') || '';
-                    if (!cls.includes('!tw-bg-black/90')) {
+                    if (document.querySelectorAll('[data-caption-id]').length === 0) {
                         await mySimulate.cursorClick(btnCaption);
                     }
                 }
@@ -171,10 +170,9 @@ class proc04Caption {
             console.log('[proc04Caption._applySettings] 开始应用:', JSON.stringify(settings));
 
             // 打开字幕面板
-            let btnCaption = await myXPath.getElement(`//button[.//*[@name="cc-captions"]]`, 5);
+            let btnCaption = await myXPath.getElement(`//div[contains(@class,'tw-h-16') and .//span[text()='Captions']]`, 5);
             if (btnCaption) {
-                let className = btnCaption.getAttribute('class');
-                if (!className.includes('!tw-bg-black/90')) {
+                if (document.querySelectorAll('[data-caption-id]').length === 0) {
                     console.log('[proc04Caption._applySettings] 打开字幕面板');
                     await mySimulate.cursorClick(btnCaption);
                 } else {
@@ -294,10 +292,9 @@ class proc04Caption {
             // 有点击记录时跳过面板等待（captionId 已知，无需等卡片加载）
             if (!_cardsLoaded() && !proc04Caption._lastClickedCaptionId) {
                 // 尝试打开字幕面板
-                const btnCaption = await myXPath.getElement(`//button[.//*[@name="cc-captions"]]`, 3);
+                const btnCaption = await myXPath.getElement(`//div[contains(@class,'tw-h-16') and .//span[text()='Captions']]`, 3);
                 if (btnCaption) {
-                    const cls = btnCaption.getAttribute('class') || '';
-                    if (!cls.includes('!tw-bg-black/90')) {
+                    if (document.querySelectorAll('[data-caption-id]').length === 0) {
                         btnCaption.click();
                     }
                 }

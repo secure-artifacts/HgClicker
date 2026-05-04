@@ -26,13 +26,13 @@ class myWebSocket {
                 throw new Error(`参数缺少参数 sendKey`);
             }
 
-            if (!(params && params.hasOwnProperty('isResponse'))) {
+            if (!params.hasOwnProperty('isResponse')) {
                 throw new Error(`参数缺少属性 isResponse`);
             }
 
             ws.send(JSON.stringify(params));
 
-            if (params && params.isResponse) {
+            if (params.isResponse) {
                 ws.onmessage = async (event) => {
                     let res2 = JSON.parse(event.data);
 
