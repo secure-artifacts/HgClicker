@@ -683,12 +683,8 @@ class proc08BatchDownload {
                 const intercepted = await interceptPromise;
                 self._hideToast();
 
-                if (intercepted && intercepted.success && intercepted.url) {
-                    const started = await self._downloadViaExtension(intercepted.url, intercepted.filename);
-                    self._showToast(
-                        started ? `✅ 第 ${i + 1}/${total} 个下载已开始` : `⚠️ 第 ${i + 1}/${total} 个：扩展下载失败`,
-                        3000
-                    );
+                if (intercepted && intercepted.success) {
+                    self._showToast(`✅ 第 ${i + 1}/${total} 个下载已开始`, 3000);
                 } else {
                     self._showToast(`✅ 第 ${i + 1}/${total} 个下载已触发`, 3000);
                 }
