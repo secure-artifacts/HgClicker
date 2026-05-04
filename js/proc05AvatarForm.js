@@ -24,13 +24,13 @@ class proc05AvatarForm {
 
             await myUtil.sleep(200 + Math.random() * 200);
 
-            await self.setAge();
-            await self.setGender();
-            await self.setEthnicity();
-
             if (mode === 'randomName') {
                 await self.setName();
                 await self.clickContinue();
+            } else {
+                await self.setAge();
+                await self.setGender();
+                await self.setEthnicity();
             }
             return { status: true, msg: `任务已完成` };
         } catch (error) {
