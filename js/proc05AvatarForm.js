@@ -14,71 +14,25 @@ class proc05AvatarForm {
         const self = this;
 
         try {
-            // let pageUrl = window.location.href;
-            // if (!(pageUrl.includes('/avatars/create/') || pageUrl.includes('/avatar/my-avatar'))) {
-            //     return { status: true, msg: `不是目标页面` };
-            // }
-
-            let _getElement = async () => {
-                return await myXPath.getElement(`.//*[contains(text(), "Your avatar is ready")]`);
-            }
-
-            let element = await _getElement();
+            let element = await myXPath.getElement(`.//*[contains(text(), "Your avatar is ready")]`);
             if (!element) {
                 return { status: true, msg: `不是目标页面` };
             }
 
-            // 错误信息
-            let errorMsg = null;
+            const stored = await new Promise(resolve => chrome.storage.local.get(['avatarFormMode'], resolve));
+            const mode = stored.avatarFormMode || 'randomName';
 
-            // 是否提交了
-            // let isSubmit = false;
+            await myUtil.sleep(200 + Math.random() * 200);
 
-            // 流程控制 （可以作为参考模板，带 if then 函数）
-            let _stepProcess = async (loop) => {
-                let isNext = true;
+            await self.setAge();
+            await self.setGender();
+            await self.setEthnicity();
 
-                if (loop > 3) {
-                    return { status: false, msg: `已尝试了3次，任务执行失败，${errorMsg}` };
-                }
-
-                // Age / Gender / Ethnicity 步骤已停用，由用户手动填写
-                // if (isNext) { await self.setAge(); }
-                // if (isNext) { await self.setGender(); }
-                // if (isNext) { await self.setEthnicity(); }
-
-                if (isNext) {
-                    await myUtil.sleep(200 + Math.random() * 200);
-
-                    let { status, msg } = await self.setName();
-
-                    isNext = status;
-                    if (!isNext) {
-                        errorMsg = msg;
-                    }
-
-                    if (status) {
-                        // 等 Continue 按钮变黑（可点击）后自动点击
-                        await self.clickContinue();
-                        return { status: true, msg: `任务已完成` };
-                    }
-                }
-
-                /*
-                if (isSubmit) {
-                    return { status: true, msg: `任务已完成` };
-                }
- 
-                if (!isNext) {
-                    loop++;
- 
-                    return await _stepProcess(loop);
-                }
- 
-                return { status: true, msg: `任务已完成` }; */
+            if (mode === 'randomName') {
+                await self.setName();
+                await self.clickContinue();
             }
-
-            return await _stepProcess(1);
+            return { status: true, msg: `任务已完成` };
         } catch (error) {
             throw new Error(`Error-xxxxx-xxxx: ${error.message}`);
         }
