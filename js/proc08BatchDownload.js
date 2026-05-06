@@ -595,9 +595,76 @@ class proc08BatchDownload {
         }
     }
 
+    // ========== API 快速通道 ==========
+
+    static async _fetchVideoUrlsFromAPI() {
+        const res = await fetch(
+            'https://api2.heygen.com/v1/project/items?limit=100&sort_key=created_ts&sort_order=desc&is_trash=false',
+            { credentials: 'include' }
+        );
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data = await res.json();
+        return (data.data?.items || [])
+            .filter(v => v.video_url)
+            .map(v => ({ title: v.title || v.name || v.id || 'video', url: v.video_url }));
+    }
+
+    static _downloadViaAnchor(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
+    }
+
+    static async _batchDownloadViaAPI() {
+        const self = this;
+        self._showToast('🔍 正在通过 API 获取视频列表...', -1);
+
+        let videos;
+        try {
+            videos = await self._fetchVideoUrlsFromAPI();
+        } catch (err) {
+            self._hideToast();
+            self._log(`API 获取失败: ${err.message}`, 'warn');
+            return false;
+        }
+
+        self._hideToast();
+
+        if (videos.length === 0) {
+            self._log('API 返回空列表，切换 DOM 方案', 'warn');
+            return false;
+        }
+
+        self._showToast(`⬇️ 开始下载，共 ${videos.length} 个视频`, 3000);
+        await self._sleep(500);
+
+        for (let i = 0; i < videos.length; i++) {
+            const { title, url } = videos[i];
+            self._showToast(`⬇️ 第 ${i + 1} / ${videos.length} 个：${title}`, -1);
+            self._log(`下载 ${i + 1}/${videos.length}: ${title}`);
+            const filename = `${title}.mp4`.replace(/[\\/:*?"<>|]/g, '_');
+            await self._downloadViaExtension(url, filename);
+        }
+
+        self._showToast(`✅ ${videos.length} 个视频下载完成`, 4000);
+        self._log('API 批量下载完成', 'success');
+        return true;
+    }
+
     // ========== 主流程 ==========
     static async _batchDownload() {
         const self = this;
+
+        // 优先走 API 快速通道
+        const apiOk = await self._batchDownloadViaAPI();
+        if (apiOk) return;
+
+        self._showToast('⚠️ API 不可用，切换到界面操作模式...', 3000);
+        await self._sleep(3000);
 
         // 1. 滚动加载全部卡片
         self._showToast('🔍 正在扫描所有视频...', -1);
