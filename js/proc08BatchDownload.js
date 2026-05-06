@@ -605,8 +605,12 @@ class proc08BatchDownload {
         if (!res.ok) throw new Error(`API ${res.status}`);
         const data = await res.json();
         return (data.data?.items || [])
-            .filter(v => v.video_url)
-            .map(v => ({ title: v.title || v.name || v.id || 'video', url: v.video_url }));
+            .filter(v => v.variants?.length)
+            .map(v => {
+                const title = v.title || v.name || v.id || 'video';
+                const variant = v.variants?.find(vt => vt.name === '720p') || v.variants?.[0];
+                return { title, url: variant.key };
+            });
     }
 
     static _downloadViaAnchor(url, filename) {
