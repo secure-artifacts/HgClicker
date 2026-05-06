@@ -9,9 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: write
-      attestations: write
 
     steps:
       - name: Checkout Chrome branch
@@ -52,11 +50,6 @@ jobs:
             icon_data.js \
             css/ \
             js/
-
-      - name: Attest Build Provenance
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: '*.zip'
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
